@@ -1,12 +1,10 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-
+import 'package:powerank/screens/Login/login_screen.dart';
 import '../../consts.dart';
-import '../Reset/reset_password.dart';
-import '../Signup/register_screen.dart';
 
-class LoginPage extends StatelessWidget {
-  const LoginPage({super.key});
+class ResetPasswordPage extends StatelessWidget {
+  const ResetPasswordPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -33,11 +31,10 @@ class LoginPage extends StatelessWidget {
                 const SizedBox(height: 16),
 
                 const Text(
-                  "Bem vindo de volta!",
-                  textAlign: TextAlign.center,
+                  "Esqueceu sua senha?",
                   style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 28,
                     color: kWhiteColor,
                   ),
                 ),
@@ -45,16 +42,15 @@ class LoginPage extends StatelessWidget {
                 const SizedBox(height: 8),
 
                 const Text(
-                  "Login",
+                  "Digite seu email e enviaremos um link para redefinir sua senha.",
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 34,
+                    fontSize: 16,
                     color: kWhiteColor,
                   ),
                 ),
 
-                SizedBox(height: size.height * 0.03),
+                SizedBox(height: size.height * 0.04),
 
                 TextField(
                   keyboardType: TextInputType.emailAddress,
@@ -67,27 +63,6 @@ class LoginPage extends StatelessWidget {
                     prefixIcon: const Icon(Icons.email_outlined),
                     filled: true,
                     hintText: "Email",
-                    fillColor: kWhiteColor,
-                    border: OutlineInputBorder(
-                      borderSide: BorderSide.none,
-                      borderRadius: BorderRadius.circular(37),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 12),
-
-                TextField(
-                  obscureText: true,
-                  style: const TextStyle(color: kInputColor),
-                  decoration: InputDecoration(
-                    contentPadding: const EdgeInsets.symmetric(
-                      vertical: 14,
-                      horizontal: 20,
-                    ),
-                    prefixIcon: const Icon(Icons.lock_outline),
-                    filled: true,
-                    hintText: "Senha",
                     fillColor: kWhiteColor,
                     border: OutlineInputBorder(
                       borderSide: BorderSide.none,
@@ -109,7 +84,7 @@ class LoginPage extends StatelessWidget {
                       borderRadius: BorderRadius.circular(37),
                     ),
                     child: const Text(
-                      "Entrar",
+                      "Enviar link de recuperação",
                       style: TextStyle(
                         color: kWhiteColor,
                         fontWeight: FontWeight.w700,
@@ -118,57 +93,15 @@ class LoginPage extends StatelessWidget {
                     ),
                   ),
                 ),
+                const SizedBox(height: 15),
 
-                const SizedBox(height: 13),
-
-                GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) =>  ResetPasswordPage(),
-                      ),
-                    );
-                  },
-                  child: RichText(
-                    text: const TextSpan(
-                      style: TextStyle(
-                        fontSize: 14,
-                      ),
-                      children: [
-                        TextSpan(
-                          text: "Esqueceu a sua senha? ",
-                          style: TextStyle(color: kWhiteColor),
-                        ),
-                        TextSpan(
-                          text: "Recupere agora",
-                          style: TextStyle(
-                            color: Colors.blueAccent,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
-                const Text(
-                  "Não tem uma conta?",
-                  style: TextStyle(color: kWhiteColor),
-                ),
-
-                const SizedBox(height: 12),
-
-             
                 CupertinoButton(
                   padding: EdgeInsets.zero,
                   onPressed: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => const RegisterPage(),
+                        builder: (_) => const LoginPage(),
                       ),
                     );
                   },
@@ -176,22 +109,16 @@ class LoginPage extends StatelessWidget {
                     alignment: Alignment.center,
                     height: size.height * 0.08,
                     decoration: BoxDecoration(
+                      color: KButtonColor,
                       borderRadius: BorderRadius.circular(37),
-                      color: const Color.fromRGBO(225, 225, 225, 0.28),
-                      boxShadow: const [
-                        BoxShadow(
-                          blurRadius: 45,
-                          color: Color.fromRGBO(120, 37, 139, 0.25),
-                          offset: Offset(0, 25),
-                        ),
-                      ],
                     ),
                     child: const Text(
-                      "Registrar",
+                      "Voltar para o log in",
                       style: TextStyle(
                         color: kWhiteColor,
                         fontWeight: FontWeight.w700,
                         fontSize: 16,
+                        
                       ),
                     ),
                   ),
