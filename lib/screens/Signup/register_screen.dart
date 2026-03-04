@@ -1,6 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-
+import '../../services/auth_service.dart';
 import '../../consts.dart';
 import '../Login/login_screen.dart';
 
@@ -146,7 +146,17 @@ class RegisterPage extends StatelessWidget {
                 // Botão para registrar
                 CupertinoButton(
                   padding: EdgeInsets.zero,
-                  onPressed: () {},
+                  onPressed: () async {
+                    final auth = AuthService();
+
+                    bool created = await auth.register(
+                      "Teste",
+                      "teste@email.com",
+                      "1234",
+                    );
+
+                    print("Criado: $created");
+                  },
                   child: Container(
                     alignment: Alignment.center,
                     height: size.height * 0.08,
