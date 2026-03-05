@@ -4,11 +4,30 @@ import '../../services/auth_service.dart';
 import '../../consts.dart';
 import '../Login/login_screen.dart';
 
-class RegisterPage extends StatelessWidget {
+class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
 
   @override
+  State<RegisterPage> createState() => _RegisterPageState();
+}
+
+class _RegisterPageState extends State<RegisterPage> {
+
+  final TextEditingController usernameController = TextEditingController();
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
+
+  @override
+  void dispose() {
+    usernameController.dispose();
+    emailController.dispose();
+    passwordController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+
     final Size size = MediaQuery.of(context).size;
 
     return Scaffold(
@@ -27,6 +46,7 @@ class RegisterPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
+
                 Image.asset(image1),
 
                 const SizedBox(height: 16),
@@ -55,8 +75,9 @@ class RegisterPage extends StatelessWidget {
 
                 SizedBox(height: size.height * 0.03),
 
-                //Espaço para o Usuario inserir o nome
+                // USERNAME
                 TextField(
+                  controller: usernameController,
                   keyboardType: TextInputType.name,
                   style: const TextStyle(color: kInputColor),
                   decoration: InputDecoration(
@@ -77,8 +98,9 @@ class RegisterPage extends StatelessWidget {
 
                 const SizedBox(height: 12),
 
-                //Espaço para colocar o Email
+                // EMAIL
                 TextField(
+                  controller: emailController,
                   keyboardType: TextInputType.emailAddress,
                   style: const TextStyle(color: kInputColor),
                   decoration: InputDecoration(
@@ -99,8 +121,9 @@ class RegisterPage extends StatelessWidget {
 
                 const SizedBox(height: 12),
 
-                //Senha
+                // PASSWORD
                 TextField(
+                  controller: passwordController,
                   obscureText: true,
                   style: const TextStyle(color: kInputColor),
                   decoration: InputDecoration(
@@ -119,43 +142,32 @@ class RegisterPage extends StatelessWidget {
                   ),
                 ),
 
-                const SizedBox(height: 12),
-
-                //Confirmar a senha
-                TextField(
-                  obscureText: true,
-                  style: const TextStyle(color: kInputColor),
-                  decoration: InputDecoration(
-                    contentPadding: const EdgeInsets.symmetric(
-                      vertical: 14,
-                      horizontal: 20,
-                    ),
-                    prefixIcon: const Icon(Icons.lock_outline),
-                    filled: true,
-                    hintText: "Confirmar Senha",
-                    fillColor: kWhiteColor,
-                    border: OutlineInputBorder(
-                      borderSide: BorderSide.none,
-                      borderRadius: BorderRadius.circular(37),
-                    ),
-                  ),
-                ),
-
                 const SizedBox(height: 20),
 
-                // Botão para registrar
+                // BOTÃO REGISTRAR
                 CupertinoButton(
                   padding: EdgeInsets.zero,
                   onPressed: () async {
+
                     final auth = AuthService();
 
                     bool created = await auth.register(
-                      "Teste",
-                      "teste@email.com",
-                      "1234",
+                      usernameController.text.trim(),
+                      emailController.text.trim(),
+                      passwordController.text.trim(),
                     );
 
                     print("Criado: $created");
+
+                    if(created){
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Usuário criado!")),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Email já existe")),
+                      );
+                    }
                   },
                   child: Container(
                     alignment: Alignment.center,
@@ -184,7 +196,7 @@ class RegisterPage extends StatelessWidget {
 
                 const SizedBox(height: 12),
 
-                //Botão para acesso da pagina de login
+                // BOTÃO LOGIN
                 CupertinoButton(
                   padding: EdgeInsets.zero,
                   onPressed: () {

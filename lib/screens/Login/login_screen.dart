@@ -2,14 +2,26 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../../consts.dart';
+import '../../services/auth_service.dart';
 import '../Reset/reset_password.dart';
 import '../Signup/register_screen.dart';
+import '../Home/home_page.dart';
 
-class LoginPage extends StatelessWidget {
+class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
   @override
+  State<LoginPage> createState() => _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> {
+
+  final emailController = TextEditingController();
+  final passwordController = TextEditingController();
+
+  @override
   Widget build(BuildContext context) {
+
     final Size size = MediaQuery.of(context).size;
 
     return Scaffold(
@@ -28,6 +40,7 @@ class LoginPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
+
                 Image.asset(image1),
 
                 const SizedBox(height: 16),
@@ -56,7 +69,9 @@ class LoginPage extends StatelessWidget {
 
                 SizedBox(height: size.height * 0.03),
 
+                /// EMAIL
                 TextField(
+                  controller: emailController,
                   keyboardType: TextInputType.emailAddress,
                   style: const TextStyle(color: kInputColor),
                   decoration: InputDecoration(
@@ -77,7 +92,9 @@ class LoginPage extends StatelessWidget {
 
                 const SizedBox(height: 12),
 
+                /// SENHA
                 TextField(
+                  controller: passwordController,
                   obscureText: true,
                   style: const TextStyle(color: kInputColor),
                   decoration: InputDecoration(
@@ -98,9 +115,47 @@ class LoginPage extends StatelessWidget {
 
                 const SizedBox(height: 20),
 
+                /// BOTÃO LOGIN
                 CupertinoButton(
                   padding: EdgeInsets.zero,
-                  onPressed: () {},
+                  onPressed: () async {
+
+                    final auth = AuthService();
+
+                    bool logged = await auth.login(
+                      emailController.text,
+                      passwordController.text,
+                    );
+
+                    if (logged) {
+
+                      print("Login realizado!");
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Login realizado com sucesso"),
+                        ),
+                      );
+
+                      /// Aqui depois vamos abrir a Home
+                      /// Navigator.push(context, MaterialPageRoute(builder: (_) => HomePage()));
+                       Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const HomePage(),
+                      ),
+                    );
+                    } else {
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Email ou senha incorretos"),
+                        ),
+                      );
+
+                    }
+
+                  },
                   child: Container(
                     alignment: Alignment.center,
                     height: size.height * 0.08,
@@ -121,20 +176,19 @@ class LoginPage extends StatelessWidget {
 
                 const SizedBox(height: 13),
 
+                /// ESQUECEU SENHA
                 GestureDetector(
                   onTap: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) =>  ResetPasswordPage(),
+                        builder: (_) => ResetPasswordPage(),
                       ),
                     );
                   },
                   child: RichText(
                     text: const TextSpan(
-                      style: TextStyle(
-                        fontSize: 14,
-                      ),
+                      style: TextStyle(fontSize: 14),
                       children: [
                         TextSpan(
                           text: "Esqueceu a sua senha? ",
@@ -161,7 +215,7 @@ class LoginPage extends StatelessWidget {
 
                 const SizedBox(height: 12),
 
-             
+                /// IR PARA REGISTRO
                 CupertinoButton(
                   padding: EdgeInsets.zero,
                   onPressed: () {
@@ -196,6 +250,7 @@ class LoginPage extends StatelessWidget {
                     ),
                   ),
                 ),
+
               ],
             ),
           ),
