@@ -1,176 +1,170 @@
 import 'package:flutter/material.dart';
 import '../models/workout_post.dart';
+import '../screens/comments/comments_page.dart';
 
-class WorkoutPostCard extends StatelessWidget {
+class WorkoutPostCard extends StatefulWidget {
   final WorkoutPost post;
-  final VoidCallback? onDelete;
-  final VoidCallback? onLike;
-  final ValueChanged<String>? onEdit;
 
-  const WorkoutPostCard({
-    super.key,
-    required this.post,
-    this.onDelete,
-    this.onLike,
-    this.onEdit,
-  });
+  const WorkoutPostCard({super.key, required this.post});
+
+  @override
+  State<WorkoutPostCard> createState() => _WorkoutPostCardState();
+}
+
+class _WorkoutPostCardState extends State<WorkoutPostCard> {
+
+  bool liked = false;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 10),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.grey[900],
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
 
-          // Cabeçalho
-          Row(
-            children: [
-              const CircleAvatar(radius: 18),
-              const SizedBox(width: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    post.user,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
+    final post = widget.post;
+
+    return Card(
+      color: Colors.grey[900],
+      margin: const EdgeInsets.only(bottom: 16),
+
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+
+            /// USER INFO
+            Row(
+              children: [
+
+                CircleAvatar(
+                  backgroundColor: Colors.green,
+                  child: Text(
+                    post.user[0],
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                ),
+
+                const SizedBox(width: 10),
+
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+
+                    Text(
+                      post.user,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  Text(
-                    post.time,
-                    style: const TextStyle(color: Colors.grey, fontSize: 12),
-                  ),
-                ],
-              ),
-            ],
-          ),
 
-          const SizedBox(height: 15),
+                    Text(
+                      post.time,
+                      style: const TextStyle(
+                        color: Colors.grey,
+                        fontSize: 12,
+                      ),
+                    )
 
-          // Título
-          Text(
-            post.title,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+                  ],
+                )
+
+              ],
             ),
-          ),
 
-          const SizedBox(height: 10),
+            const SizedBox(height: 10),
 
-          // Exercícios
-          ...post.exercises.map((e) => Text(
-                e,
-                style: const TextStyle(color: Colors.grey),
-              )),
-
-          const SizedBox(height: 15),
-
-          // Ações
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-
-     
-              Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.comment, color: Colors.white),
-                    onPressed: () {
-
-                      TextEditingController commentController =
-                          TextEditingController();
-
-                      showDialog(
-                        context: context,
-                        builder: (_) => AlertDialog(
-
-                          title: const Text("Add Comment"),
-
-                          content: TextField(
-                            controller: commentController,
-                          ),
-
-                          actions: [
-
-                            TextButton(
-                              onPressed: () {
-
-                                post.commentList.add(commentController.text);
-                                post.comments++;
-
-                                Navigator.pop(context);
-
-                              },
-                              child: const Text("Comment"),
-                            )
-
-                          ],
-                        ),
-                      );
-
-                    },
-                  ),
-                  Text(
-                    "${post.likes}",
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                  const SizedBox(width: 20),
-                  const Icon(Icons.comment, color: Colors.white),
-                  const SizedBox(width: 5),
-                  Text(
-                    "${post.comments}",
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                ],
+            /// WORKOUT TITLE
+            Text(
+              post.title,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
               ),
+            ),
 
-              // Editar e deletar
-              Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.edit, color: Colors.white),
-                    onPressed: () {
-                      final controller =
-                          TextEditingController(text: post.title);
+            const SizedBox(height: 10),
 
-                      showDialog(
-                        context: context,
-                        builder: (_) => AlertDialog(
-                          title: const Text("Edit Workout"),
-                          content: TextField(controller: controller),
-                          actions: [
-                            TextButton(
-                              onPressed: () {
-                                onEdit?.call(controller.text);
-                                Navigator.pop(context);
-                              },
-                              child: const Text("Save"),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
+            /// EXERCISES
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: post.exercises.map((exercise) {
+
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+
+                  child: Text(
+                    exercise,
+                    style: const TextStyle(color: Colors.grey),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.delete, color: Colors.red),
-                    onPressed: onDelete,
+                );
+
+              }).toList(),
+            ),
+
+            const SizedBox(height: 12),
+
+            /// ACTIONS
+            Row(
+              children: [
+
+                /// LIKE BUTTON
+                IconButton(
+                  icon: Icon(
+                    liked ? Icons.favorite : Icons.favorite_border,
+                    color: liked ? Colors.red : Colors.white,
                   ),
-                ],
-              ),
 
-            ],
-          ),
+                  onPressed: () {
 
-        ],
+                    setState(() {
+
+                      liked = !liked;
+
+                      if (liked) {
+                        post.likes++;
+                      } else {
+                        post.likes--;
+                      }
+
+                    });
+
+                  },
+                ),
+
+                Text(
+                  "${post.likes}",
+                  style: const TextStyle(color: Colors.white),
+                ),
+
+                const SizedBox(width: 20),
+
+                /// COMMENT BUTTON
+                IconButton(
+                  icon: const Icon(Icons.comment, color: Colors.white),
+
+                  onPressed: () {
+
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => CommentsPage(post: post),
+                      ),
+                    );
+
+                  },
+                ),
+
+                Text(
+                  "${post.comments}",
+                  style: const TextStyle(color: Colors.white),
+                ),
+
+              ],
+            ),
+
+          ],
+        ),
       ),
     );
   }

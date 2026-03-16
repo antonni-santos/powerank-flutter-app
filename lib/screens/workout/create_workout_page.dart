@@ -40,6 +40,7 @@ class _CreateWorkoutPageState extends State<CreateWorkoutPage> {
         exercises: exercises,
         likes: 0,
         comments: 0,
+        commentsList: [],
       ),
     );
 
@@ -63,7 +64,10 @@ class _CreateWorkoutPageState extends State<CreateWorkoutPage> {
 
             const Text(
               "Workout Name",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
             ),
 
             const SizedBox(height: 8),
@@ -80,7 +84,10 @@ class _CreateWorkoutPageState extends State<CreateWorkoutPage> {
 
             const Text(
               "Add Exercise",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
             ),
 
             const SizedBox(height: 8),
@@ -129,11 +136,13 @@ class _CreateWorkoutPageState extends State<CreateWorkoutPage> {
 
                       trailing: IconButton(
                         icon: const Icon(Icons.delete),
+
                         onPressed: () {
                           setState(() {
                             exercises.removeAt(index);
                           });
                         },
+
                       ),
 
                     ),
@@ -147,6 +156,7 @@ class _CreateWorkoutPageState extends State<CreateWorkoutPage> {
 
             SizedBox(
               width: double.infinity,
+
               child: ElevatedButton(
                 onPressed: saveWorkout,
                 child: const Text("Save Workout"),

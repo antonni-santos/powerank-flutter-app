@@ -14,7 +14,7 @@ class FeedData {
       ],
       likes: 12,
       comments: 2,
-       commentList: [],
+       commentsList: [],
     ),
 
     WorkoutPost(
@@ -27,7 +27,7 @@ class FeedData {
       ],
       likes: 18,
       comments: 4,
-       commentList: [],
+       commentsList: [],
     ),
 
   ];
