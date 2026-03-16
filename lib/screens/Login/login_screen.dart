@@ -1,6 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-
+import '../home/main_navigation.dart';
 import '../../consts.dart';
 import '../../services/auth_service.dart';
 import '../Reset/reset_password.dart';
@@ -137,12 +137,13 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       );
 
-                       Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const HomeFeedPage(),
-                      ),
-                    );
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => MainNavigation(),
+                        ),
+                      );
+
                     } else {
 
                       ScaffoldMessenger.of(context).showSnackBar(

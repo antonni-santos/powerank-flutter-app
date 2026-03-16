@@ -1,17 +1,19 @@
 class WorkoutPost {
+  String title;               
   final String user;
   final String time;
-  final String title;
   final List<String> exercises;
-  final int likes;
-  final int comments;
+  int likes;
+  int comments;
+  List<String> commentList;   
 
   WorkoutPost({
+    required this.title,
     required this.user,
     required this.time,
-    required this.title,
     required this.exercises,
-    required this.likes,
-    required this.comments,
-  });
+    this.likes = 0,            
+    this.comments = 0,         
+    List<String>? commentList, 
+  }) : commentList = commentList ?? []; 
 }

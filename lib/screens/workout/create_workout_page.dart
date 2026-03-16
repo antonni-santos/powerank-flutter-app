@@ -25,86 +25,125 @@ class _CreateWorkoutPageState extends State<CreateWorkoutPage> {
     }
   }
 
-void saveWorkout() {
+  void saveWorkout() {
 
-  if (workoutNameController.text.isEmpty || exercises.isEmpty) {
-    return;
+    if (workoutNameController.text.isEmpty || exercises.isEmpty) {
+      return;
+    }
+
+    FeedData.posts.insert(
+      0,
+      WorkoutPost(
+        user: "You",
+        time: "now",
+        title: workoutNameController.text,
+        exercises: exercises,
+        likes: 0,
+        comments: 0,
+      ),
+    );
+
+    Navigator.pop(context);
   }
-
-  FeedData.posts.insert(
-    0,
-    WorkoutPost(
-      user: "You",
-      time: "now",
-      title: workoutNameController.text,
-      exercises: exercises,
-      likes: 0,
-      comments: 0,
-    ),
-  );
-
-  Navigator.pop(context);
-}
 
   @override
   Widget build(BuildContext context) {
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("Create Workout"),
       ),
 
       body: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
 
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-
           children: [
 
             const Text(
               "Workout Name",
-              style: TextStyle(fontSize: 18),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
+
+            const SizedBox(height: 8),
 
             TextField(
               controller: workoutNameController,
               decoration: const InputDecoration(
+                border: OutlineInputBorder(),
                 hintText: "Example: Chest Day",
-              ),
-            ),
-
-            const SizedBox(height: 30),
-
-            const Text(
-              "Exercises",
-              style: TextStyle(fontSize: 18),
-            ),
-
-            const SizedBox(height: 10),
-
-            TextField(
-              controller: exerciseController,
-              decoration: InputDecoration(
-                hintText: "Add exercise",
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.add),
-                  onPressed: addExercise,
-                ),
               ),
             ),
 
             const SizedBox(height: 20),
 
+            const Text(
+              "Add Exercise",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+
+            const SizedBox(height: 8),
+
+            Row(
+              children: [
+
+                Expanded(
+                  child: TextField(
+                    controller: exerciseController,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      hintText: "Bench Press 80kg x 8",
+                    ),
+                  ),
+                ),
+
+                const SizedBox(width: 10),
+
+                ElevatedButton(
+                  onPressed: addExercise,
+                  child: const Text("Add"),
+                )
+
+              ],
+            ),
+
+            const SizedBox(height: 20),
+
+            Text(
+              "Total exercises: ${exercises.length}",
+              style: const TextStyle(fontSize: 16),
+            ),
+
+            const SizedBox(height: 10),
+
             Expanded(
               child: ListView.builder(
                 itemCount: exercises.length,
                 itemBuilder: (context, index) {
-                  return ListTile(
-                    title: Text(exercises[index]),
+
+                  return Card(
+                    child: ListTile(
+
+                      title: Text(exercises[index]),
+
+                      trailing: IconButton(
+                        icon: const Icon(Icons.delete),
+                        onPressed: () {
+                          setState(() {
+                            exercises.removeAt(index);
+                          });
+                        },
+                      ),
+
+                    ),
                   );
+
                 },
               ),
             ),
+
+            const SizedBox(height: 10),
 
             SizedBox(
               width: double.infinity,
@@ -113,6 +152,7 @@ void saveWorkout() {
                 child: const Text("Save Workout"),
               ),
             )
+
           ],
         ),
       ),
