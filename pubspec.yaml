@@ -10,11 +10,12 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  firebase_core: ^2.30.0   # ✅ mesmo nível que flutter
-  firebase_auth: ^4.19.0   # ✅ mesmo nível que flutter
+  firebase_core: ^2.30.0   
+  firebase_auth: ^4.19.0  
   cupertino_icons: ^1.0.8
   sqflite: ^2.3.0
   path: ^1.8.3
+  cloud_firestore: ^4.15.0
 
 dev_dependencies:
   flutter_test:

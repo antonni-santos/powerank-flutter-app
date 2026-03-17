@@ -152,7 +152,6 @@ class _RegisterPageState extends State<RegisterPage> {
                     final auth = AuthService();
 
                     bool created = await auth.register(
-                      usernameController.text.trim(),
                       emailController.text.trim(),
                       passwordController.text.trim(),
                     );

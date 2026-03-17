@@ -1,41 +1,41 @@
-import 'database_helper.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class AuthService {
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // REGISTRO
-  Future<bool> register(
-      String username,
-      String email,
-      String password) async {
-
-    final db = await DatabaseHelper.instance.database;
-
+  // REGISTER
+  Future<bool> register(String email, String password) async {
     try {
-      await db.insert('users', {
-        'username': username,
-        'email': email,
-        'password': password,
-      });
-
-      return true; // sucesso
+      await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      return true;
     } catch (e) {
-      return false; // erro (ex: email já existe)
+      return false;
     }
   }
 
   // LOGIN
-  Future<bool> login(
-      String email,
-      String password) async {
+  Future<bool> login(String email, String password) async {
+    try {
+      await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
 
-    final db = await DatabaseHelper.instance.database;
+  // RESET PASSWORD
+  Future<void> resetPassword(String email) async {
+    await _auth.sendPasswordResetEmail(email: email);
+  }
 
-    final result = await db.query(
-      'users',
-      where: 'email = ? AND password = ?',
-      whereArgs: [email, password],
-    );
-
-    return result.isNotEmpty;
+  // LOGOUT
+  Future<void> logout() async {
+    await _auth.signOut();
   }
 }

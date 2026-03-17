@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../utils/workout_stats.dart';
+import '../../services/auth_service.dart';
+import '../Login/login_screen.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -86,6 +88,28 @@ class ProfilePage extends StatelessWidget {
               ),
 
             ],
+          ),
+
+          const SizedBox(height: 40),
+
+
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
+            ),
+            onPressed: () async {
+              await AuthService().logout();
+
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const LoginPage(),
+                ),
+                (route) => false,
+              );
+            },
+            child: const Text("Logout"),
           ),
 
         ],
