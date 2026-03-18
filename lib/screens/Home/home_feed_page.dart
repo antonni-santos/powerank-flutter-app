@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../models/workout_post.dart';
-import '../../widgets/workout_post_card.dart';
-import '../workout/create_workout_page.dart';
-import '../../data/feed_data.dart';
-import '../../services/firestore_service.dart';
-
+import 'package:powerank/screens/workout/create_workout_page.dart';
+import 'package:powerank/services/firestore_service.dart';
+import 'package:powerank/widgets/workout_post_card.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 class HomeFeedPage extends StatefulWidget {
   const HomeFeedPage({super.key});
 
@@ -28,7 +26,6 @@ class _HomeFeedPageState extends State<HomeFeedPage> {
         future: FirestoreService().getWorkouts(),
         builder: (context, snapshot) {
 
-       
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
@@ -62,21 +59,18 @@ class _HomeFeedPageState extends State<HomeFeedPage> {
           );
         },
       ),
+
       floatingActionButton: FloatingActionButton(
         backgroundColor: Colors.green,
         child: const Icon(Icons.add),
-
         onPressed: () async {
-
           await Navigator.push(
             context,
             MaterialPageRoute(
               builder: (_) => const CreateWorkoutPage(),
             ),
           );
-
           setState(() {});
-
         },
       ),
     );

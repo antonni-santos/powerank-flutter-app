@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../data/feed_data.dart';
 import '../../models/workout_post.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class CreateWorkoutPage extends StatefulWidget {
   const CreateWorkoutPage({super.key});
@@ -25,31 +27,29 @@ class _CreateWorkoutPageState extends State<CreateWorkoutPage> {
     }
   }
 
-  void saveWorkout() {
-
+  void saveWorkout() async {
     if (workoutNameController.text.isEmpty || exercises.isEmpty) {
       return;
     }
 
-    FeedData.posts.insert(
-      0,
-      WorkoutPost(
-        user: "You",
-        time: "now",
-        title: workoutNameController.text,
-        exercises: exercises,
-        likes: 0,
-        comments: 0,
-        commentsList: [],
-      ),
-    );
+    final user = FirebaseAuth.instance.currentUser; 
+
+    if (user == null) return; 
+
+    await FirebaseFirestore.instance.collection('workouts').add({
+      "title": workoutNameController.text,
+      "userId": user.uid,        
+      "exercises": exercises,
+      "likes": 0,
+      "likedBy": [],
+      "createdAt": Timestamp.now(),
+    });
 
     Navigator.pop(context);
   }
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
       appBar: AppBar(
         title: const Text("Create Workout"),
@@ -110,7 +110,7 @@ class _CreateWorkoutPageState extends State<CreateWorkoutPage> {
                 ElevatedButton(
                   onPressed: addExercise,
                   child: const Text("Add"),
-                )
+                ),
 
               ],
             ),
@@ -128,26 +128,19 @@ class _CreateWorkoutPageState extends State<CreateWorkoutPage> {
               child: ListView.builder(
                 itemCount: exercises.length,
                 itemBuilder: (context, index) {
-
                   return Card(
                     child: ListTile(
-
                       title: Text(exercises[index]),
-
                       trailing: IconButton(
                         icon: const Icon(Icons.delete),
-
                         onPressed: () {
                           setState(() {
                             exercises.removeAt(index);
                           });
                         },
-
                       ),
-
                     ),
                   );
-
                 },
               ),
             ),
@@ -156,12 +149,11 @@ class _CreateWorkoutPageState extends State<CreateWorkoutPage> {
 
             SizedBox(
               width: double.infinity,
-
               child: ElevatedButton(
                 onPressed: saveWorkout,
                 child: const Text("Save Workout"),
               ),
-            )
+            ),
 
           ],
         ),

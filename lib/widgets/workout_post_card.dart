@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import '../models/workout_post.dart';
-import '../screens/comments/comments_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:powerank/models/workout_post.dart';
+import 'package:powerank/screens/comments/comments_page.dart';
 
 class WorkoutPostCard extends StatefulWidget {
   final WorkoutPost post;
@@ -13,12 +15,34 @@ class WorkoutPostCard extends StatefulWidget {
 
 class _WorkoutPostCardState extends State<WorkoutPostCard> {
 
-  bool liked = false;
+  void toggleLike() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final post = widget.post;
+    final docRef = FirebaseFirestore.instance
+        .collection('workouts')
+        .doc(post.id);
+
+    if (post.likedBy.contains(user.uid)) {
+      await docRef.update({
+        "likedBy": FieldValue.arrayRemove([user.uid]),
+        "likes": FieldValue.increment(-1),
+      });
+    } else {
+      await docRef.update({
+        "likedBy": FieldValue.arrayUnion([user.uid]),
+        "likes": FieldValue.increment(1),
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
 
     final post = widget.post;
+    final user = FirebaseAuth.instance.currentUser;
+    final liked = user != null && post.likedBy.contains(user.uid);
 
     return Card(
       color: Colors.grey[900],
@@ -31,24 +55,20 @@ class _WorkoutPostCardState extends State<WorkoutPostCard> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
 
-            /// USER INFO
+            // USER INFO
             Row(
               children: [
-
                 CircleAvatar(
                   backgroundColor: Colors.green,
                   child: Text(
-                    post.user[0],
+                    post.user.isNotEmpty ? post.user[0] : '?', // 👈 evita crash
                     style: const TextStyle(color: Colors.white),
                   ),
                 ),
-
                 const SizedBox(width: 10),
-
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-
                     Text(
                       post.user,
                       style: const TextStyle(
@@ -56,24 +76,21 @@ class _WorkoutPostCardState extends State<WorkoutPostCard> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-
                     Text(
                       post.time,
                       style: const TextStyle(
                         color: Colors.grey,
                         fontSize: 12,
                       ),
-                    )
-
+                    ),
                   ],
-                )
-
+                ),
               ],
             ),
 
             const SizedBox(height: 10),
 
-            /// WORKOUT TITLE
+            // WORKOUT TITLE
             Text(
               post.title,
               style: const TextStyle(
@@ -85,53 +102,34 @@ class _WorkoutPostCardState extends State<WorkoutPostCard> {
 
             const SizedBox(height: 10),
 
-            /// EXERCISES
+            // EXERCISES
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: post.exercises.map((exercise) {
-
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 4),
-
                   child: Text(
                     exercise,
                     style: const TextStyle(color: Colors.grey),
                   ),
                 );
-
               }).toList(),
             ),
 
             const SizedBox(height: 12),
 
-            /// ACTIONS
+            // ACTIONS
             Row(
               children: [
 
-                /// LIKE BUTTON
+                // LIKE BUTTON
                 IconButton(
                   icon: Icon(
                     liked ? Icons.favorite : Icons.favorite_border,
                     color: liked ? Colors.red : Colors.white,
                   ),
-
-                  onPressed: () {
-
-                    setState(() {
-
-                      liked = !liked;
-
-                      if (liked) {
-                        post.likes++;
-                      } else {
-                        post.likes--;
-                      }
-
-                    });
-
-                  },
+                  onPressed: toggleLike,
                 ),
-
                 Text(
                   "${post.likes}",
                   style: const TextStyle(color: Colors.white),
@@ -139,22 +137,18 @@ class _WorkoutPostCardState extends State<WorkoutPostCard> {
 
                 const SizedBox(width: 20),
 
-                /// COMMENT BUTTON
+                // COMMENT BUTTON
                 IconButton(
                   icon: const Icon(Icons.comment, color: Colors.white),
-
                   onPressed: () {
-
                     Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (_) => CommentsPage(post: post),
                       ),
                     );
-
                   },
                 ),
-
                 Text(
                   "${post.comments}",
                   style: const TextStyle(color: Colors.white),
