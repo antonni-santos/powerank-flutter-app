@@ -148,17 +148,15 @@ class _RegisterPageState extends State<RegisterPage> {
                 CupertinoButton(
                   padding: EdgeInsets.zero,
                   onPressed: () async {
-
                     final auth = AuthService();
 
                     bool created = await auth.register(
                       emailController.text.trim(),
                       passwordController.text.trim(),
+                      usernameController.text.trim(), // 👈 passa o nome
                     );
 
-                    print("Criado: $created");
-
-                    if(created){
+                    if (created) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text("Usuário criado!")),
                       );
@@ -230,6 +228,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                   ),
                 ),
+
               ],
             ),
           ),

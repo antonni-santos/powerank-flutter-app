@@ -15,21 +15,53 @@ class WorkoutPostCard extends StatefulWidget {
 
 class _WorkoutPostCardState extends State<WorkoutPostCard> {
 
+  late bool liked;
+  late int likesCount;
+
+  @override
+  void initState() {
+    super.initState();
+    _syncFromPost();
+  }
+
+  @override
+  void didUpdateWidget(WorkoutPostCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // 👈 atualiza quando o stream traz novos dados
+    if (oldWidget.post.likes != widget.post.likes ||
+        oldWidget.post.likedBy != widget.post.likedBy) {
+      _syncFromPost();
+    }
+  }
+
+  void _syncFromPost() {
+    final user = FirebaseAuth.instance.currentUser;
+    liked = user != null && widget.post.likedBy.contains(user.uid);
+    likesCount = widget.post.likes;
+  }
+
   void toggleLike() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    final post = widget.post;
     final docRef = FirebaseFirestore.instance
         .collection('workouts')
-        .doc(post.id);
+        .doc(widget.post.id);
 
-    if (post.likedBy.contains(user.uid)) {
+    if (liked) {
+      setState(() {
+        liked = false;
+        likesCount--;
+      });
       await docRef.update({
         "likedBy": FieldValue.arrayRemove([user.uid]),
         "likes": FieldValue.increment(-1),
       });
     } else {
+      setState(() {
+        liked = true;
+        likesCount++;
+      });
       await docRef.update({
         "likedBy": FieldValue.arrayUnion([user.uid]),
         "likes": FieldValue.increment(1),
@@ -41,8 +73,6 @@ class _WorkoutPostCardState extends State<WorkoutPostCard> {
   Widget build(BuildContext context) {
 
     final post = widget.post;
-    final user = FirebaseAuth.instance.currentUser;
-    final liked = user != null && post.likedBy.contains(user.uid);
 
     return Card(
       color: Colors.grey[900],
@@ -61,7 +91,7 @@ class _WorkoutPostCardState extends State<WorkoutPostCard> {
                 CircleAvatar(
                   backgroundColor: Colors.green,
                   child: Text(
-                    post.user.isNotEmpty ? post.user[0] : '?', // 👈 evita crash
+                    post.user.isNotEmpty ? post.user[0] : '?',
                     style: const TextStyle(color: Colors.white),
                   ),
                 ),
@@ -90,7 +120,7 @@ class _WorkoutPostCardState extends State<WorkoutPostCard> {
 
             const SizedBox(height: 10),
 
-            // WORKOUT TITLE
+            // WORKOUT 
             Text(
               post.title,
               style: const TextStyle(
@@ -122,7 +152,7 @@ class _WorkoutPostCardState extends State<WorkoutPostCard> {
             Row(
               children: [
 
-                // LIKE BUTTON
+                // LIKE 
                 IconButton(
                   icon: Icon(
                     liked ? Icons.favorite : Icons.favorite_border,
@@ -131,13 +161,13 @@ class _WorkoutPostCardState extends State<WorkoutPostCard> {
                   onPressed: toggleLike,
                 ),
                 Text(
-                  "${post.likes}",
+                  "$likesCount",
                   style: const TextStyle(color: Colors.white),
                 ),
 
                 const SizedBox(width: 20),
 
-                // COMMENT BUTTON
+                // COMMENT 
                 IconButton(
                   icon: const Icon(Icons.comment, color: Colors.white),
                   onPressed: () {

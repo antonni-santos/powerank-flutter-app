@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:powerank/screens/workout/create_workout_page.dart';
 import 'package:powerank/services/firestore_service.dart';
 import 'package:powerank/widgets/workout_post_card.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+
 class HomeFeedPage extends StatefulWidget {
   const HomeFeedPage({super.key});
 
@@ -22,8 +22,8 @@ class _HomeFeedPageState extends State<HomeFeedPage> {
         backgroundColor: Colors.black,
       ),
 
-      body: FutureBuilder(
-        future: FirestoreService().getWorkouts(),
+      body: StreamBuilder(
+        stream: FirestoreService().getWorkoutsStream(), // 👈 stream em vez de future
         builder: (context, snapshot) {
 
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -70,7 +70,6 @@ class _HomeFeedPageState extends State<HomeFeedPage> {
               builder: (_) => const CreateWorkoutPage(),
             ),
           );
-          setState(() {});
         },
       ),
     );
