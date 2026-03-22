@@ -12,7 +12,6 @@ class AuthService {
         password: password,
       );
 
-      // 👈 guarda o nome no Firestore
       await FirebaseFirestore.instance
           .collection('users')
           .doc(result.user!.uid)
@@ -24,6 +23,7 @@ class AuthService {
 
       return true;
     } catch (e) {
+      print("Erro no register: $e"); 
       return false;
     }
   }
@@ -37,13 +37,20 @@ class AuthService {
       );
       return true;
     } catch (e) {
+      print("Erro no login: $e"); 
       return false;
     }
   }
 
   // RESET PASSWORD
   Future<void> resetPassword(String email) async {
-    await _auth.sendPasswordResetEmail(email: email);
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+      print("Email de recuperação enviado para: $email"); 
+    } catch (e) {
+      print("Erro no resetPassword: $e"); 
+      rethrow; 
+    }
   }
 
   // LOGOUT

@@ -5,6 +5,17 @@ import 'package:powerank/models/workout_post.dart';
 class WorkoutHistoryPage extends StatelessWidget {
   const WorkoutHistoryPage({super.key});
 
+  String _exerciseDisplay(dynamic exercise) {
+    if (exercise is Map) {
+      final name = exercise['name'] ?? '';
+      final weight = exercise['weight'] ?? 0;
+      final sets = exercise['sets'] ?? 0;
+      final reps = exercise['reps'] ?? 0;
+      return '$name — ${weight}kg x $sets x $reps';
+    }
+    return exercise.toString();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -61,7 +72,10 @@ class WorkoutHistoryPage extends StatelessWidget {
                         content: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: workout.exercises
-                              .map((e) => Text(e))
+                              .map((e) => Text(
+                                    _exerciseDisplay(e), 
+                                    style: const TextStyle(color: Colors.black),
+                                  ))
                               .toList(),
                         ),
                       ),

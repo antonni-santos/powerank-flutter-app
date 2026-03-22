@@ -5,33 +5,35 @@ class FeedData {
   static List<WorkoutPost> posts = [
 
     WorkoutPost(
-      id: '1',             
+      id: '1',
+      userId: 'local_1',
       user: "João",
       time: "2h",
       title: "Chest Day",
       exercises: [
-        "Bench Press 80kg x 8",
-        "Incline DB 30kg x 10"
+        {'name': 'Bench Press', 'weight': 80, 'sets': 4, 'reps': 8},
+        {'name': 'Incline DB', 'weight': 30, 'sets': 3, 'reps': 10},
       ],
       likes: 12,
       comments: 2,
       commentsList: [],
-      likedBy: [],          
+      likedBy: [],
     ),
 
     WorkoutPost(
-      id: '2',              
+      id: '2',
+      userId: 'local_2',
       user: "Carlos",
       time: "5h",
       title: "Leg Day",
       exercises: [
-        "Squat 120kg x 5",
-        "Leg Press 200kg x 10"
+        {'name': 'Squat', 'weight': 120, 'sets': 5, 'reps': 5},
+        {'name': 'Leg Press', 'weight': 200, 'sets': 4, 'reps': 10},
       ],
       likes: 18,
       comments: 4,
       commentsList: [],
-      likedBy: [],         
+      likedBy: [],
     ),
 
   ];

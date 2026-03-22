@@ -27,7 +27,6 @@ class _WorkoutPostCardState extends State<WorkoutPostCard> {
   @override
   void didUpdateWidget(WorkoutPostCard oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // 👈 atualiza quando o stream traz novos dados
     if (oldWidget.post.likes != widget.post.likes ||
         oldWidget.post.likedBy != widget.post.likedBy) {
       _syncFromPost();
@@ -69,10 +68,54 @@ class _WorkoutPostCardState extends State<WorkoutPostCard> {
     }
   }
 
+  void deleteWorkout() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    if (widget.post.userId != user.uid) return;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Excluir treino"),
+        content: const Text("Tens a certeza que queres excluir este treino?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Cancelar"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("Excluir", style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    await FirebaseFirestore.instance
+        .collection('workouts')
+        .doc(widget.post.id)
+        .delete();
+  }
+
+  String _exerciseDisplay(dynamic exercise) {
+    if (exercise is Map) {
+      final name = exercise['name'] ?? '';
+      final weight = exercise['weight'] ?? 0;
+      final sets = exercise['sets'] ?? 0;
+      final reps = exercise['reps'] ?? 0;
+      return '$name — ${weight}kg x $sets x $reps';
+    }
+    return exercise.toString();
+  }
+
   @override
   Widget build(BuildContext context) {
 
     final post = widget.post;
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final isOwner = currentUser != null && post.userId == currentUser.uid;
 
     return Card(
       color: Colors.grey[900],
@@ -120,7 +163,7 @@ class _WorkoutPostCardState extends State<WorkoutPostCard> {
 
             const SizedBox(height: 10),
 
-            // WORKOUT 
+            // WORKOUT TITLE
             Text(
               post.title,
               style: const TextStyle(
@@ -131,15 +174,13 @@ class _WorkoutPostCardState extends State<WorkoutPostCard> {
             ),
 
             const SizedBox(height: 10),
-
-            // EXERCISES
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: post.exercises.map((exercise) {
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 4),
                   child: Text(
-                    exercise,
+                    _exerciseDisplay(exercise),
                     style: const TextStyle(color: Colors.grey),
                   ),
                 );
@@ -150,39 +191,48 @@ class _WorkoutPostCardState extends State<WorkoutPostCard> {
 
             // ACTIONS
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
 
-                // LIKE 
-                IconButton(
-                  icon: Icon(
-                    liked ? Icons.favorite : Icons.favorite_border,
-                    color: liked ? Colors.red : Colors.white,
-                  ),
-                  onPressed: toggleLike,
-                ),
-                Text(
-                  "$likesCount",
-                  style: const TextStyle(color: Colors.white),
-                ),
-
-                const SizedBox(width: 20),
-
-                // COMMENT 
-                IconButton(
-                  icon: const Icon(Icons.comment, color: Colors.white),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => CommentsPage(post: post),
+                // LIKE E COMENTÁRIO
+                Row(
+                  children: [
+                    IconButton(
+                      icon: Icon(
+                        liked ? Icons.favorite : Icons.favorite_border,
+                        color: liked ? Colors.red : Colors.white,
                       ),
-                    );
-                  },
+                      onPressed: toggleLike,
+                    ),
+                    Text(
+                      "$likesCount",
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                    const SizedBox(width: 20),
+                    IconButton(
+                      icon: const Icon(Icons.comment, color: Colors.white),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => CommentsPage(post: post),
+                          ),
+                        );
+                      },
+                    ),
+                    Text(
+                      "${post.comments}",
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                  ],
                 ),
-                Text(
-                  "${post.comments}",
-                  style: const TextStyle(color: Colors.white),
-                ),
+
+                // BOTÃO EXCLUIR
+                if (isOwner)
+                  IconButton(
+                    icon: const Icon(Icons.delete, color: Colors.red),
+                    onPressed: deleteWorkout,
+                  ),
 
               ],
             ),

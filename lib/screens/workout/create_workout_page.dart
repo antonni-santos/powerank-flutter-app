@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../data/feed_data.dart';
-import '../../models/workout_post.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -11,37 +9,87 @@ class CreateWorkoutPage extends StatefulWidget {
   State<CreateWorkoutPage> createState() => _CreateWorkoutPageState();
 }
 
+class ExerciseEntry {
+  String name;
+  double weight;
+  int sets;
+  int reps;
+
+  ExerciseEntry({
+    required this.name,
+    required this.weight,
+    required this.sets,
+    required this.reps,
+  });
+
+  Map<String, dynamic> toMap() => {
+    'name': name,
+    'weight': weight,
+    'sets': sets,
+    'reps': reps,
+  };
+
+  String get display => '$name — ${weight}kg x $sets x $reps';
+}
+
 class _CreateWorkoutPageState extends State<CreateWorkoutPage> {
 
   final TextEditingController workoutNameController = TextEditingController();
-  final TextEditingController exerciseController = TextEditingController();
+  final TextEditingController nameController = TextEditingController();
+  final TextEditingController weightController = TextEditingController();
+  final TextEditingController setsController = TextEditingController();
+  final TextEditingController repsController = TextEditingController();
 
-  List<String> exercises = [];
+  List<ExerciseEntry> exercises = [];
 
   void addExercise() {
-    if (exerciseController.text.isNotEmpty) {
-      setState(() {
-        exercises.add(exerciseController.text);
-        exerciseController.clear();
-      });
+    if (nameController.text.isEmpty ||
+        weightController.text.isEmpty ||
+        setsController.text.isEmpty ||
+        repsController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Preenche todos os campos do exercício")),
+      );
+      return;
     }
+
+    setState(() {
+      exercises.add(ExerciseEntry(
+        name: nameController.text.trim(),
+        weight: double.tryParse(weightController.text) ?? 0,
+        sets: int.tryParse(setsController.text) ?? 0,
+        reps: int.tryParse(repsController.text) ?? 0,
+      ));
+      nameController.clear();
+      weightController.clear();
+      setsController.clear();
+      repsController.clear();
+    });
   }
 
   void saveWorkout() async {
     if (workoutNameController.text.isEmpty || exercises.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Adiciona um nome e pelo menos um exercício")),
+      );
       return;
     }
 
-    final user = FirebaseAuth.instance.currentUser; 
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
 
-    if (user == null) return; 
+    final totalWeight = exercises.fold<double>(
+      0, (sum, e) => sum + (e.weight * e.sets * e.reps),
+    );
 
     await FirebaseFirestore.instance.collection('workouts').add({
-      "title": workoutNameController.text,
-      "userId": user.uid,        
-      "exercises": exercises,
+      "title": workoutNameController.text.trim(),
+      "userId": user.uid,
+      "exercises": exercises.map((e) => e.toMap()).toList(), 
+      "totalWeight": totalWeight, 
       "likes": 0,
       "likedBy": [],
+      "comments": 0,
       "createdAt": Timestamp.now(),
     });
 
@@ -62,16 +110,12 @@ class _CreateWorkoutPageState extends State<CreateWorkoutPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
 
+            // NOME DO TREINO
             const Text(
               "Workout Name",
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-
             const SizedBox(height: 8),
-
             TextField(
               controller: workoutNameController,
               decoration: const InputDecoration(
@@ -84,53 +128,94 @@ class _CreateWorkoutPageState extends State<CreateWorkoutPage> {
 
             const Text(
               "Add Exercise",
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+
+            const SizedBox(height: 8),
+
+            // NOME DO EXERCÍCIO
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                hintText: "Nome (ex: Bench Press)",
               ),
             ),
 
             const SizedBox(height: 8),
 
+            // PESO, SÉRIES, REPS
             Row(
               children: [
 
                 Expanded(
                   child: TextField(
-                    controller: exerciseController,
+                    controller: weightController,
+                    keyboardType: TextInputType.number,
                     decoration: const InputDecoration(
                       border: OutlineInputBorder(),
-                      hintText: "Bench Press 80kg x 8",
+                      hintText: "Peso (kg)",
                     ),
                   ),
                 ),
 
-                const SizedBox(width: 10),
+                const SizedBox(width: 8),
 
-                ElevatedButton(
-                  onPressed: addExercise,
-                  child: const Text("Add"),
+                Expanded(
+                  child: TextField(
+                    controller: setsController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      hintText: "Séries",
+                    ),
+                  ),
+                ),
+
+                const SizedBox(width: 8),
+
+                Expanded(
+                  child: TextField(
+                    controller: repsController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      hintText: "Reps",
+                    ),
+                  ),
                 ),
 
               ],
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 8),
+
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: addExercise,
+                icon: const Icon(Icons.add),
+                label: const Text("Adicionar exercício"),
+              ),
+            ),
+
+            const SizedBox(height: 12),
 
             Text(
               "Total exercises: ${exercises.length}",
               style: const TextStyle(fontSize: 16),
             ),
 
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
 
+            // LISTA DE EXERCÍCIOS
             Expanded(
               child: ListView.builder(
                 itemCount: exercises.length,
                 itemBuilder: (context, index) {
                   return Card(
                     child: ListTile(
-                      title: Text(exercises[index]),
+                      title: Text(exercises[index].display),
                       trailing: IconButton(
                         icon: const Icon(Icons.delete),
                         onPressed: () {
