@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:powerank/screens/Login/login_screen.dart';
-import 'package:powerank/screens/friends/friends_page.dart';
+import 'package:powerank/screens/social/followers_page.dart';
 import 'package:powerank/screens/rank/rank_page.dart';
 import 'package:powerank/screens/settings/settings_page.dart';
 import 'package:powerank/services/auth_service.dart';
@@ -19,59 +19,59 @@ class AppDrawer extends StatelessWidget {
 
             const Padding(
               padding: EdgeInsets.all(20),
-              child: Text(
-                "Menu",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              child: Text("Menu",
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold)),
             ),
 
             const Divider(color: Colors.grey),
 
             ListTile(
               leading: const Icon(Icons.settings, color: Colors.white),
-              title: const Text("Definições", style: TextStyle(color: Colors.white)),
+              title: const Text("Definições",
+                  style: TextStyle(color: Colors.white)),
               onTap: () {
                 Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const SettingsPage()),
-                );
+                Navigator.push(context,
+                    MaterialPageRoute(
+                        builder: (_) => const SettingsPage()));
               },
             ),
 
             ListTile(
               leading: const Icon(Icons.people, color: Colors.white),
-              title: const Text("Amigos", style: TextStyle(color: Colors.white)),
+              title: const Text("Seguidores",
+                  style: TextStyle(color: Colors.white)),
               onTap: () {
                 Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const FriendsPage()),
-                );
+                Navigator.push(context,
+                    MaterialPageRoute(
+                        builder: (_) => const FollowersPage()));
               },
             ),
 
             ListTile(
-              leading: const Icon(Icons.emoji_events, color: Colors.amber),
-              title: const Text("Rank", style: TextStyle(color: Colors.white)),
+              leading:
+                  const Icon(Icons.emoji_events, color: Colors.amber),
+              title: const Text("Rank",
+                  style: TextStyle(color: Colors.white)),
               onTap: () {
                 Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const RankPage()),
-                );
+                Navigator.push(context,
+                    MaterialPageRoute(
+                        builder: (_) => const RankPage()));
               },
             ),
 
             ListTile(
               leading: const Icon(Icons.share, color: Colors.white),
-              title: const Text("Partilhar perfil", style: TextStyle(color: Colors.white)),
+              title: const Text("Partilhar perfil",
+                  style: TextStyle(color: Colors.white)),
               onTap: () {
                 Navigator.pop(context);
+                // TODO: partilhar perfil
               },
             ),
 
@@ -81,13 +81,15 @@ class AppDrawer extends StatelessWidget {
 
             ListTile(
               leading: const Icon(Icons.logout, color: Colors.red),
-              title: const Text("Logout", style: TextStyle(color: Colors.red)),
+              title: const Text("Logout",
+                  style: TextStyle(color: Colors.red)),
               onTap: () async {
                 Navigator.pop(context);
                 await AuthService().logout();
                 Navigator.pushAndRemoveUntil(
                   context,
-                  MaterialPageRoute(builder: (_) => const LoginPage()),
+                  MaterialPageRoute(
+                      builder: (_) => const LoginPage()),
                   (route) => false,
                 );
               },

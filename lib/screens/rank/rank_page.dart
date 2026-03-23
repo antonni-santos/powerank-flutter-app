@@ -14,7 +14,7 @@ class RankUser {
   final String uid;
   final String username;
   final double totalWeight;
-  final int totalDays;     // 👈 mudado de totalWorkouts para totalDays
+  final int totalDays;     
   final int totalLikes;
   final int points;
   final String division;
