@@ -1,12 +1,21 @@
 import 'package:flutter/material.dart';
-import 'screens/home/home_feed_page.dart';
-import 'screens/profile/profile_page.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:provider/provider.dart';
+import 'screens/Home/home_feed_page.dart';
+import 'screens/profile/profile_page.dart';
+import 'screens/history/workout_history_page.dart';
+import 'screens/home/main_navigation.dart';
+import 'services/theme_notifier.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-  runApp(const PowerankApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => ThemeNotifier(),
+      child: const PowerankApp(),
+    ),
+  );
 }
 
 class PowerankApp extends StatelessWidget {
@@ -14,59 +23,15 @@ class PowerankApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Powerank',
-      theme: ThemeData.dark(),
+      theme: ThemeData.light(),       
+      darkTheme: ThemeData.dark(),    
+      themeMode: themeNotifier.themeMode, 
       home: const MainNavigation(),
-    );
-  }
-}
-
-class MainNavigation extends StatefulWidget {
-  const MainNavigation({super.key});
-
-  @override
-  State<MainNavigation> createState() => _MainNavigationState();
-}
-
-class _MainNavigationState extends State<MainNavigation> {
-
-  int index = 0;
-
-  final pages = [
-    HomeFeedPage(),
-    const Placeholder(),
-    const ProfilePage(),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-
-      body: pages[index],
-
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: index,
-        onTap: (value) {
-          setState(() {
-            index = value;
-          });
-        },
-        items: const [
-          BottomNavigationBarItem(
-              icon: Icon(Icons.home),
-              label: "Home"),
-
-          BottomNavigationBarItem(
-              icon: Icon(Icons.fitness_center),
-              label: "Workout"),
-
-          BottomNavigationBarItem(
-              icon: Icon(Icons.person),
-              label: "Profile"),
-        ],
-      ),
     );
   }
 }

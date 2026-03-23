@@ -5,7 +5,6 @@ import '../../consts.dart';
 import '../../services/auth_service.dart';
 import '../Reset/reset_password.dart';
 import '../Signup/register_screen.dart';
-import '../Home/home_feed_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -18,6 +17,7 @@ class _LoginPageState extends State<LoginPage> {
 
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
+  bool _showPassword = false; 
 
   @override
   Widget build(BuildContext context) {
@@ -69,7 +69,7 @@ class _LoginPageState extends State<LoginPage> {
 
                 SizedBox(height: size.height * 0.03),
 
-                /// EMAIL
+                // EMAIL
                 TextField(
                   controller: emailController,
                   keyboardType: TextInputType.emailAddress,
@@ -92,10 +92,10 @@ class _LoginPageState extends State<LoginPage> {
 
                 const SizedBox(height: 12),
 
-                /// SENHA
+                // SENHA 
                 TextField(
                   controller: passwordController,
-                  obscureText: true,
+                  obscureText: !_showPassword,
                   style: const TextStyle(color: kInputColor),
                   decoration: InputDecoration(
                     contentPadding: const EdgeInsets.symmetric(
@@ -103,6 +103,17 @@ class _LoginPageState extends State<LoginPage> {
                       horizontal: 20,
                     ),
                     prefixIcon: const Icon(Icons.lock_outline),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _showPassword ? Icons.visibility_off : Icons.visibility,
+                        color: Colors.grey,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _showPassword = !_showPassword;
+                        });
+                      },
+                    ),
                     filled: true,
                     hintText: "Senha",
                     fillColor: kWhiteColor,
@@ -115,45 +126,29 @@ class _LoginPageState extends State<LoginPage> {
 
                 const SizedBox(height: 20),
 
-                /// BOTÃO LOGIN
+                // BOTÃO LOGIN
                 CupertinoButton(
                   padding: EdgeInsets.zero,
                   onPressed: () async {
-
                     final auth = AuthService();
-
                     bool logged = await auth.login(
                       emailController.text,
                       passwordController.text,
                     );
 
                     if (logged) {
-
-                      print("Login realizado!");
-
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text("Login realizado com sucesso"),
-                        ),
+                        const SnackBar(content: Text("Login realizado com sucesso")),
                       );
-
                       Navigator.pushReplacement(
                         context,
-                        MaterialPageRoute(
-                          builder: (_) => MainNavigation(),
-                        ),
+                        MaterialPageRoute(builder: (_) => MainNavigation()),
                       );
-
                     } else {
-
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text("Email ou senha incorretos"),
-                        ),
+                        const SnackBar(content: Text("Email ou senha incorretos")),
                       );
-
                     }
-
                   },
                   child: Container(
                     alignment: Alignment.center,
@@ -175,14 +170,12 @@ class _LoginPageState extends State<LoginPage> {
 
                 const SizedBox(height: 13),
 
-                /// ESQUECEU SENHA
+                // ESQUECEU SENHA
                 GestureDetector(
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (_) => ResetPasswordPage(),
-                      ),
+                      MaterialPageRoute(builder: (_) => ResetPasswordPage()),
                     );
                   },
                   child: RichText(
@@ -214,15 +207,13 @@ class _LoginPageState extends State<LoginPage> {
 
                 const SizedBox(height: 12),
 
-                /// IR PARA REGISTRO
+                // IR PARA REGISTRO
                 CupertinoButton(
                   padding: EdgeInsets.zero,
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (_) => const RegisterPage(),
-                      ),
+                      MaterialPageRoute(builder: (_) => const RegisterPage()),
                     );
                   },
                   child: Container(

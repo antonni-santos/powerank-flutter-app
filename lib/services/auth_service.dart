@@ -57,4 +57,10 @@ class AuthService {
   Future<void> logout() async {
     await _auth.signOut();
   }
-}
+
+  Future<void> changePassword(String newPassword) async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception("Sem utilizador");
+    await user.updatePassword(newPassword);
+  }
+} 

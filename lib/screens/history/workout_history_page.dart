@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:powerank/services/firestore_service.dart';
 import 'package:powerank/models/workout_post.dart';
+import 'package:powerank/widgets/app_drawer.dart';
 
 class WorkoutHistoryPage extends StatelessWidget {
   const WorkoutHistoryPage({super.key});
@@ -24,7 +25,17 @@ class WorkoutHistoryPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text("My Workouts"),
         backgroundColor: Colors.black,
+        actions: [
+          Builder(
+            builder: (context) => IconButton(
+              icon: const Icon(Icons.menu, color: Colors.white),
+              onPressed: () => Scaffold.of(context).openEndDrawer(),
+            ),
+          ),
+        ],
       ),
+
+      endDrawer: const AppDrawer(), 
 
       body: StreamBuilder<List<WorkoutPost>>(
         stream: FirestoreService().getWorkoutsStream(),
@@ -73,7 +84,7 @@ class WorkoutHistoryPage extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: workout.exercises
                               .map((e) => Text(
-                                    _exerciseDisplay(e), 
+                                    _exerciseDisplay(e),
                                     style: const TextStyle(color: Colors.black),
                                   ))
                               .toList(),

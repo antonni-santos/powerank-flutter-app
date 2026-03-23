@@ -1,38 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'friends_rank_page.dart';
+import 'rank_page.dart';
 
-class RankPage extends StatefulWidget {
-  const RankPage({super.key});
+class FriendsRankPage extends StatefulWidget {
+  const FriendsRankPage({super.key});
 
   @override
-  State<RankPage> createState() => _RankPageState();
+  State<FriendsRankPage> createState() => _FriendsRankPageState();
 }
 
-class RankUser {
-  final String uid;
-  final String username;
-  final double totalWeight;
-  final int totalDays;     // 👈 mudado de totalWorkouts para totalDays
-  final int totalLikes;
-  final int points;
-  final String division;
-  final String divisionEmoji;
-
-  RankUser({
-    required this.uid,
-    required this.username,
-    required this.totalWeight,
-    required this.totalDays,
-    required this.totalLikes,
-    required this.points,
-    required this.division,
-    required this.divisionEmoji,
-  });
-}
-
-class _RankPageState extends State<RankPage> with SingleTickerProviderStateMixin {
+class _FriendsRankPageState extends State<FriendsRankPage>
+    with SingleTickerProviderStateMixin {
 
   late TabController _tabController;
   int _selectedCategory = 0;
@@ -60,7 +39,7 @@ class _RankPageState extends State<RankPage> with SingleTickerProviderStateMixin
     required int totalLikes,
   }) {
     final weightPoints = (totalWeight / 100).floor();
-    final daysPoints = totalDays * 50;     // 👈 agora usa dias de check-in
+    final daysPoints = totalDays * 50;
     final likesPoints = totalLikes * 10;
     return weightPoints + daysPoints + likesPoints;
   }
@@ -87,7 +66,6 @@ class _RankPageState extends State<RankPage> with SingleTickerProviderStateMixin
     }
   }
 
-  // 👈 busca os dias de check-in de um utilizador
   Future<int> _fetchCheckInDays(String uid) async {
     final doc = await FirebaseFirestore.instance
         .collection('checkins')
@@ -97,16 +75,26 @@ class _RankPageState extends State<RankPage> with SingleTickerProviderStateMixin
     return dates.length;
   }
 
-  Future<List<RankUser>> fetchRanking() async {
-    final usersSnapshot = await FirebaseFirestore.instance
+  Future<List<RankUser>> fetchFriendsRanking() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return [];
+
+    final userDoc = await FirebaseFirestore.instance
         .collection('users')
+        .doc(currentUser.uid)
         .get();
+
+    final friends = List<String>.from(userDoc.data()?['friends'] ?? []);
+    final allIds = [currentUser.uid, ...friends];
 
     final List<RankUser> rankUsers = [];
 
-    for (final userDoc in usersSnapshot.docs) {
-      final uid = userDoc.id;
-      final username = userDoc.data()['username'] ?? 'Utilizador';
+    for (final uid in allIds) {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .get();
+      final username = doc.data()?['username'] ?? 'Utilizador';
 
       final workoutsSnapshot = await FirebaseFirestore.instance
           .collection('workouts')
@@ -155,7 +143,7 @@ class _RankPageState extends State<RankPage> with SingleTickerProviderStateMixin
       case 2: sorted.sort((a, b) => b.totalDays.compareTo(a.totalDays)); break; // 👈
       case 3: sorted.sort((a, b) => b.totalLikes.compareTo(a.totalLikes)); break;
     }
-    return sorted.take(50).toList();
+    return sorted;
   }
 
   Widget _buildRankCard(RankUser rankUser, int position, bool isCurrentUser) {
@@ -243,7 +231,7 @@ class _RankPageState extends State<RankPage> with SingleTickerProviderStateMixin
                   : _selectedCategory == 1
                       ? '${rankUser.totalWeight.toStringAsFixed(0)} kg'
                       : _selectedCategory == 2
-                          ? '${rankUser.totalDays} dias'  // 👈
+                          ? '${rankUser.totalDays} dias' // 👈
                           : '${rankUser.totalLikes} likes',
               style: TextStyle(
                 color: divisionColor,
@@ -266,20 +254,8 @@ class _RankPageState extends State<RankPage> with SingleTickerProviderStateMixin
       backgroundColor: Colors.black,
 
       appBar: AppBar(
-        title: const Text('🏆 Rank'),
+        title: const Text('👥 Rank de Amigos'),
         backgroundColor: Colors.black,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.people, color: Colors.white),
-            tooltip: 'Rank de Amigos',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const FriendsRankPage()),
-              );
-            },
-          ),
-        ],
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.green,
@@ -295,7 +271,7 @@ class _RankPageState extends State<RankPage> with SingleTickerProviderStateMixin
       ),
 
       body: FutureBuilder<List<RankUser>>(
-        future: fetchRanking(),
+        future: fetchFriendsRanking(),
         builder: (context, snapshot) {
 
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -314,7 +290,7 @@ class _RankPageState extends State<RankPage> with SingleTickerProviderStateMixin
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return const Center(
               child: Text(
-                'Sem utilizadores no ranking ainda',
+                'Sem amigos no ranking ainda',
                 style: TextStyle(color: Colors.grey),
               ),
             );

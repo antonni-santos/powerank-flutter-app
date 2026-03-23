@@ -16,6 +16,7 @@ class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController usernameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
+  bool _showPassword = false; 
 
   @override
   void dispose() {
@@ -121,10 +122,10 @@ class _RegisterPageState extends State<RegisterPage> {
 
                 const SizedBox(height: 12),
 
-                // PASSWORD
+                // SENHA 
                 TextField(
                   controller: passwordController,
-                  obscureText: true,
+                  obscureText: !_showPassword,
                   style: const TextStyle(color: kInputColor),
                   decoration: InputDecoration(
                     contentPadding: const EdgeInsets.symmetric(
@@ -132,6 +133,17 @@ class _RegisterPageState extends State<RegisterPage> {
                       horizontal: 20,
                     ),
                     prefixIcon: const Icon(Icons.lock_outline),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _showPassword ? Icons.visibility_off : Icons.visibility,
+                        color: Colors.grey,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _showPassword = !_showPassword;
+                        });
+                      },
+                    ),
                     filled: true,
                     hintText: "Senha",
                     fillColor: kWhiteColor,
@@ -149,11 +161,10 @@ class _RegisterPageState extends State<RegisterPage> {
                   padding: EdgeInsets.zero,
                   onPressed: () async {
                     final auth = AuthService();
-
                     bool created = await auth.register(
                       emailController.text.trim(),
                       passwordController.text.trim(),
-                      usernameController.text.trim(), // 👈 passa o nome
+                      usernameController.text.trim(),
                     );
 
                     if (created) {
@@ -199,9 +210,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (_) => const LoginPage(),
-                      ),
+                      MaterialPageRoute(builder: (_) => const LoginPage()),
                     );
                   },
                   child: Container(
