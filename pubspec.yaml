@@ -10,7 +10,10 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+<<<<<<< HEAD
   shared_preferences: ^2.2.2
+=======
+>>>>>>> ae3cd4e47011cad52817ad96d225c007f6712ec8
   provider: ^6.1.2
   firebase_core: ^2.30.0
   firebase_auth: ^4.19.0

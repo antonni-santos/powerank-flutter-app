@@ -17,7 +17,12 @@ class MessagesListPage extends StatelessWidget {
       if (parts.contains(otherUid)) return doc.id;
     }
 
+<<<<<<< HEAD
     final newChat = await FirebaseFirestore.instance.collection('chats').add({
+=======
+    final newChat =
+        await FirebaseFirestore.instance.collection('chats').add({
+>>>>>>> ae3cd4e47011cad52817ad96d225c007f6712ec8
       'participants': [myUid, otherUid],
       'lastMessage': '',
       'lastMessageAt': FieldValue.serverTimestamp(),
@@ -28,10 +33,104 @@ class MessagesListPage extends StatelessWidget {
     return newChat.id;
   }
 
+<<<<<<< HEAD
+=======
+  void _showNewMessageDialog(BuildContext context) {
+    final searchController = TextEditingController();
+    final currentUser = FirebaseAuth.instance.currentUser;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => StatefulBuilder(
+        builder: (context, setState) {
+          List<Map<String, dynamic>> results = [];
+
+          void search(String query) async {
+            if (query.isEmpty) {
+              setState(() => results = []);
+              return;
+            }
+            final snap = await FirebaseFirestore.instance
+                .collection('users')
+                .where('username', isGreaterThanOrEqualTo: query)
+                .where('username', isLessThanOrEqualTo: '$query\uf8ff')
+                .get();
+            setState(() {
+              results = snap.docs
+                  .where((d) => d.id != currentUser?.uid)
+                  .map((d) => {'uid': d.id, ...d.data()})
+                  .toList();
+            });
+          }
+
+          return Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
+              top: 16,
+              left: 16,
+              right: 16,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text("Nova mensagem",
+                    style:
+                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: searchController,
+                  decoration: InputDecoration(
+                    hintText: "Pesquisar utilizador...",
+                    prefixIcon: const Icon(Icons.search),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onChanged: search,
+                ),
+                const SizedBox(height: 8),
+                ...results.map((user) => ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: Colors.green,
+                        child: Text(
+                          (user['username'] as String).isNotEmpty
+                              ? (user['username'] as String)[0].toUpperCase()
+                              : '?',
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                      ),
+                      title: Text(user['username'] ?? ''),
+                      onTap: () async {
+                        Navigator.pop(context);
+                        final chatId = await _getOrCreateChat(
+                            currentUser!.uid, user['uid']);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ChatPage(
+                              chatId: chatId,
+                              otherUid: user['uid'],
+                              otherUsername: user['username'],
+                            ),
+                          ),
+                        );
+                      },
+                    )),
+                const SizedBox(height: 16),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+>>>>>>> ae3cd4e47011cad52817ad96d225c007f6712ec8
   @override
   Widget build(BuildContext context) {
     final currentUser = FirebaseAuth.instance.currentUser;
 
+<<<<<<< HEAD
     if (currentUser == null) {
       return Scaffold(
         appBar: AppBar(
@@ -70,6 +169,60 @@ class MessagesListPage extends StatelessWidget {
             itemCount: following.length,
             itemBuilder: (context, index) {
               final otherUid = following[index];
+=======
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Mensagens"),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed: () => _showNewMessageDialog(context),
+          ),
+        ],
+      ),
+
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('chats')
+            .where('participants', arrayContains: currentUser?.uid)
+            // .orderBy('lastMessageAt', descending: true) 
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.message, color: Colors.grey, size: 60),
+                  SizedBox(height: 16),
+                  Text("Sem mensagens ainda",
+                      style: TextStyle(color: Colors.grey, fontSize: 16)),
+                  SizedBox(height: 8),
+                  Text("Começa uma conversa!",
+                      style: TextStyle(color: Colors.grey, fontSize: 13)),
+                ],
+              ),
+            );
+          }
+
+          final chats = snapshot.data!.docs;
+
+          return ListView.builder(
+            itemCount: chats.length,
+            itemBuilder: (context, index) {
+              final chat = chats[index].data() as Map<String, dynamic>;
+              final chatId = chats[index].id;
+              final participants =
+                  List<String>.from(chat['participants'] ?? []);
+              final otherUid = participants.firstWhere(
+                (uid) => uid != currentUser?.uid,
+                orElse: () => '',
+              );
+>>>>>>> ae3cd4e47011cad52817ad96d225c007f6712ec8
 
               return FutureBuilder<DocumentSnapshot>(
                 future: FirebaseFirestore.instance
@@ -77,6 +230,7 @@ class MessagesListPage extends StatelessWidget {
                     .doc(otherUid)
                     .get(),
                 builder: (context, userSnap) {
+<<<<<<< HEAD
                   if (!userSnap.hasData || !userSnap.data!.exists) {
                     return const SizedBox();
                   }
@@ -100,6 +254,52 @@ class MessagesListPage extends StatelessWidget {
                       final chatId =
                           await _getOrCreateChat(currentUser.uid, otherUid);
 
+=======
+                  if (!userSnap.hasData) return const SizedBox();
+                  final userData =
+                      userSnap.data?.data() as Map<String, dynamic>?;
+                  final username = userData?['username'] ?? 'Utilizador';
+                  final lastMessage = chat['lastMessage'] ?? '';
+                  final unread =
+                      (chat['unread_${currentUser?.uid}'] ?? 0) as int;
+
+                  return ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: Colors.green,
+                      child: Text(
+                        username.isNotEmpty ? username[0].toUpperCase() : '?',
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    ),
+                    title: Text(
+                      username,
+                      style: TextStyle(
+                        fontWeight: unread > 0
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                      ),
+                    ),
+                    subtitle: Text(
+                      lastMessage,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: unread > 0 ? Colors.green : Colors.grey,
+                      ),
+                    ),
+                    trailing: unread > 0
+                        ? CircleAvatar(
+                            radius: 10,
+                            backgroundColor: Colors.green,
+                            child: Text(
+                              '$unread',
+                              style: const TextStyle(
+                                  color: Colors.white, fontSize: 11),
+                            ),
+                          )
+                        : null,
+                    onTap: () {
+>>>>>>> ae3cd4e47011cad52817ad96d225c007f6712ec8
                       Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -120,4 +320,8 @@ class MessagesListPage extends StatelessWidget {
       ),
     );
   }
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> ae3cd4e47011cad52817ad96d225c007f6712ec8

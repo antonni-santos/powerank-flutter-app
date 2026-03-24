@@ -141,7 +141,11 @@ class _SettingsPageState extends State<SettingsPage> {
             secondary: Icon(isDark ? Icons.dark_mode : Icons.light_mode),
             title: const Text("Modo escuro"),
             value: isDark,
+<<<<<<< HEAD
             activeThumbColor: Colors.green,
+=======
+            activeColor: Colors.green,
+>>>>>>> ae3cd4e47011cad52817ad96d225c007f6712ec8
             onChanged: (_) => themeNotifier.toggleTheme(),
           ),
 
