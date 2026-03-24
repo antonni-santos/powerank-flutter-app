@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "198880702967",
+    "project_id": "powerank-97108",
+    "storage_bucket": "powerank-97108.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:198880702967:android:73e7baf1c4dbebb0443ef2",
+        "android_client_info": {
+          "package_name": "com.example.powerank"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCVV0AwBdI-1nJjGxuDBbCZgFaIz7uSFYQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
