@@ -1,15 +1,8 @@
-<<<<<<< HEAD
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:powerank/models/workout_post.dart';
 import 'package:powerank/services/notification_service.dart';
-=======
-import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import '../../models/workout_post.dart';
->>>>>>> ae3cd4e47011cad52817ad96d225c007f6712ec8
 
 class CommentsPage extends StatefulWidget {
   final WorkoutPost post;
@@ -21,7 +14,6 @@ class CommentsPage extends StatefulWidget {
 }
 
 class _CommentsPageState extends State<CommentsPage> {
-<<<<<<< HEAD
   final TextEditingController controller = TextEditingController();
 
   CollectionReference<Map<String, dynamic>> get commentsRef =>
@@ -39,18 +31,6 @@ class _CommentsPageState extends State<CommentsPage> {
   Future<void> sendComment() async {
     final commentText = controller.text.trim();
     if (commentText.isEmpty) return;
-=======
-
-  final TextEditingController controller = TextEditingController();
-
-  CollectionReference get commentsRef => FirebaseFirestore.instance
-      .collection('workouts')
-      .doc(widget.post.id)
-      .collection('comments');
-
-  void sendComment() async {
-    if (controller.text.trim().isEmpty) return;
->>>>>>> ae3cd4e47011cad52817ad96d225c007f6712ec8
 
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
@@ -59,33 +39,20 @@ class _CommentsPageState extends State<CommentsPage> {
         .collection('users')
         .doc(user.uid)
         .get();
-<<<<<<< HEAD
     final username = (userDoc.data()?['username'] ?? 'Utilizador').toString();
 
     await commentsRef.add({
       'text': commentText,
-=======
-    final username = userDoc.data()?['username'] ?? 'Utilizador';
-
-   
-    await commentsRef.add({
-      'text': controller.text.trim(),
->>>>>>> ae3cd4e47011cad52817ad96d225c007f6712ec8
       'userId': user.uid,
       'username': username,
       'createdAt': FieldValue.serverTimestamp(),
     });
 
-<<<<<<< HEAD
-=======
-  
->>>>>>> ae3cd4e47011cad52817ad96d225c007f6712ec8
     await FirebaseFirestore.instance
         .collection('workouts')
         .doc(widget.post.id)
         .update({'comments': FieldValue.increment(1)});
 
-<<<<<<< HEAD
     await NotificationService().sendMentionNotificationsFromText(
       text: commentText,
       senderId: user.uid,
@@ -94,57 +61,37 @@ class _CommentsPageState extends State<CommentsPage> {
       workoutId: widget.post.id,
     );
 
-=======
->>>>>>> ae3cd4e47011cad52817ad96d225c007f6712ec8
     controller.clear();
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final textColor = theme.colorScheme.onSurface;
+    final mutedColor = textColor.withOpacity(0.7);
+
     return Scaffold(
-      backgroundColor: Colors.black,
-<<<<<<< HEAD
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Comments'),
-        backgroundColor: Colors.black,
       ),
       body: Column(
         children: [
-=======
-
-      appBar: AppBar(
-        title: const Text("Comments"),
-        backgroundColor: Colors.black,
-      ),
-
-      body: Column(
-        children: [
-
-          // LISTA DE COMENTÁRIOS
->>>>>>> ae3cd4e47011cad52817ad96d225c007f6712ec8
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: commentsRef
                   .orderBy('createdAt', descending: false)
                   .snapshots(),
               builder: (context, snapshot) {
-<<<<<<< HEAD
-=======
-
->>>>>>> ae3cd4e47011cad52817ad96d225c007f6712ec8
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
 
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const Center(
+                  return Center(
                     child: Text(
-<<<<<<< HEAD
                       'Sem comentarios ainda',
-=======
-                      "Sem comentários ainda",
->>>>>>> ae3cd4e47011cad52817ad96d225c007f6712ec8
-                      style: TextStyle(color: Colors.grey),
+                      style: TextStyle(color: mutedColor),
                     ),
                   );
                 }
@@ -155,29 +102,19 @@ class _CommentsPageState extends State<CommentsPage> {
                   itemCount: comments.length,
                   itemBuilder: (context, index) {
                     final data = comments[index].data() as Map<String, dynamic>;
-<<<<<<< HEAD
 
                     return ListTile(
                       title: Text(
                         (data['username'] ?? 'Utilizador').toString(),
-=======
-                    return ListTile(
-                      title: Text(
-                        data['username'] ?? 'Utilizador',
->>>>>>> ae3cd4e47011cad52817ad96d225c007f6712ec8
-                        style: const TextStyle(
-                          color: Colors.green,
+                        style: TextStyle(
+                          color: theme.colorScheme.primary,
                           fontWeight: FontWeight.bold,
                           fontSize: 13,
                         ),
                       ),
                       subtitle: Text(
-<<<<<<< HEAD
                         (data['text'] ?? '').toString(),
-=======
-                        data['text'] ?? '',
->>>>>>> ae3cd4e47011cad52817ad96d225c007f6712ec8
-                        style: const TextStyle(color: Colors.white),
+                        style: TextStyle(color: textColor),
                       ),
                     );
                   },
@@ -185,59 +122,36 @@ class _CommentsPageState extends State<CommentsPage> {
               },
             ),
           ),
-<<<<<<< HEAD
-=======
-
-          // INPUT
->>>>>>> ae3cd4e47011cad52817ad96d225c007f6712ec8
           Container(
             padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: theme.cardColor,
+              border: Border(
+                top: BorderSide(color: theme.dividerColor),
+              ),
+            ),
             child: Row(
               children: [
-<<<<<<< HEAD
-=======
-
->>>>>>> ae3cd4e47011cad52817ad96d225c007f6712ec8
                 Expanded(
                   child: TextField(
                     controller: controller,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: const InputDecoration(
-<<<<<<< HEAD
+                    style: TextStyle(color: textColor),
+                    decoration: InputDecoration(
                       hintText: 'Add a comment',
-=======
-                      hintText: "Add a comment",
->>>>>>> ae3cd4e47011cad52817ad96d225c007f6712ec8
-                      hintStyle: TextStyle(color: Colors.grey),
+                      hintStyle: TextStyle(color: mutedColor),
+                      border: InputBorder.none,
                     ),
                   ),
                 ),
-<<<<<<< HEAD
                 IconButton(
-                  icon: const Icon(Icons.send, color: Colors.white),
+                  icon: Icon(Icons.send, color: theme.colorScheme.primary),
                   onPressed: sendComment,
                 ),
               ],
             ),
           ),
-=======
-
-                IconButton(
-                  icon: const Icon(Icons.send, color: Colors.white),
-                  onPressed: sendComment, // guarda no Firestore
-                ),
-
-              ],
-            ),
-          ),
-
->>>>>>> ae3cd4e47011cad52817ad96d225c007f6712ec8
         ],
       ),
     );
   }
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> ae3cd4e47011cad52817ad96d225c007f6712ec8

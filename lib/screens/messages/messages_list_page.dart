@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'chat_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+import 'package:powerank/screens/messages/chat_page.dart';
 
 class MessagesListPage extends StatelessWidget {
   const MessagesListPage({super.key});
@@ -17,12 +17,7 @@ class MessagesListPage extends StatelessWidget {
       if (parts.contains(otherUid)) return doc.id;
     }
 
-<<<<<<< HEAD
     final newChat = await FirebaseFirestore.instance.collection('chats').add({
-=======
-    final newChat =
-        await FirebaseFirestore.instance.collection('chats').add({
->>>>>>> ae3cd4e47011cad52817ad96d225c007f6712ec8
       'participants': [myUid, otherUid],
       'lastMessage': '',
       'lastMessageAt': FieldValue.serverTimestamp(),
@@ -33,8 +28,6 @@ class MessagesListPage extends StatelessWidget {
     return newChat.id;
   }
 
-<<<<<<< HEAD
-=======
   void _showNewMessageDialog(BuildContext context) {
     final searchController = TextEditingController();
     final currentUser = FirebaseAuth.instance.currentUser;
@@ -46,16 +39,18 @@ class MessagesListPage extends StatelessWidget {
         builder: (context, setState) {
           List<Map<String, dynamic>> results = [];
 
-          void search(String query) async {
+          Future<void> search(String query) async {
             if (query.isEmpty) {
               setState(() => results = []);
               return;
             }
+
             final snap = await FirebaseFirestore.instance
                 .collection('users')
                 .where('username', isGreaterThanOrEqualTo: query)
                 .where('username', isLessThanOrEqualTo: '$query\uf8ff')
                 .get();
+
             setState(() {
               results = snap.docs
                   .where((d) => d.id != currentUser?.uid)
@@ -74,48 +69,53 @@ class MessagesListPage extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text("Nova mensagem",
-                    style:
-                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const Text(
+                  'Nova mensagem',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: searchController,
                   decoration: InputDecoration(
-                    hintText: "Pesquisar utilizador...",
+                    hintText: 'Pesquisar utilizador...',
                     prefixIcon: const Icon(Icons.search),
                     border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   onChanged: search,
                 ),
                 const SizedBox(height: 8),
-                ...results.map((user) => ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: Colors.green,
-                        child: Text(
-                          (user['username'] as String).isNotEmpty
-                              ? (user['username'] as String)[0].toUpperCase()
-                              : '?',
-                          style: const TextStyle(color: Colors.white),
-                        ),
+                ...results.map(
+                  (user) => ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      child: Text(
+                        (user['username'] as String).isNotEmpty
+                            ? (user['username'] as String)[0].toUpperCase()
+                            : '?',
+                        style: const TextStyle(color: Colors.white),
                       ),
-                      title: Text(user['username'] ?? ''),
-                      onTap: () async {
-                        Navigator.pop(context);
-                        final chatId = await _getOrCreateChat(
-                            currentUser!.uid, user['uid']);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ChatPage(
-                              chatId: chatId,
-                              otherUid: user['uid'],
-                              otherUsername: user['username'],
-                            ),
+                    ),
+                    title: Text((user['username'] ?? '').toString()),
+                    onTap: () async {
+                      Navigator.pop(context);
+                      final chatId =
+                          await _getOrCreateChat(currentUser!.uid, user['uid']);
+                      if (!context.mounted) return;
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ChatPage(
+                            chatId: chatId,
+                            otherUid: user['uid'].toString(),
+                            otherUsername: user['username'].toString(),
                           ),
-                        );
-                      },
-                    )),
+                        ),
+                      );
+                    },
+                  ),
+                ),
                 const SizedBox(height: 16),
               ],
             ),
@@ -125,26 +125,30 @@ class MessagesListPage extends StatelessWidget {
     );
   }
 
->>>>>>> ae3cd4e47011cad52817ad96d225c007f6712ec8
   @override
   Widget build(BuildContext context) {
     final currentUser = FirebaseAuth.instance.currentUser;
 
-<<<<<<< HEAD
     if (currentUser == null) {
       return Scaffold(
         appBar: AppBar(
-          title: const Text("Mensagens"),
+          title: const Text('Mensagens'),
         ),
         body: const Center(
-          child: Text("Faz login para ver as mensagens"),
+          child: Text('Faz login para ver as mensagens'),
         ),
       );
     }
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Mensagens"),
+        title: const Text('Mensagens'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed: () => _showNewMessageDialog(context),
+          ),
+        ],
       ),
       body: StreamBuilder<DocumentSnapshot>(
         stream: FirebaseFirestore.instance
@@ -159,156 +163,133 @@ class MessagesListPage extends StatelessWidget {
           final data = followSnap.data!.data() as Map<String, dynamic>?;
           final following = List<String>.from(data?['following'] ?? []);
 
-          if (following.isEmpty) {
-            return const Center(
-              child: Text("Nao segues ninguem ainda"),
-            );
-          }
+          return StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('chats')
+                .where('participants', arrayContains: currentUser.uid)
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-          return ListView.builder(
-            itemCount: following.length,
-            itemBuilder: (context, index) {
-              final otherUid = following[index];
-=======
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Mensagens"),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: () => _showNewMessageDialog(context),
-          ),
-        ],
-      ),
+              final chatDocs = snapshot.data!.docs;
+              final Map<String, QueryDocumentSnapshot> chatByOtherUid = {};
+              final allUids = <String>{...following};
 
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('chats')
-            .where('participants', arrayContains: currentUser?.uid)
-            // .orderBy('lastMessageAt', descending: true) 
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+              for (final doc in chatDocs) {
+                final chat = doc.data() as Map<String, dynamic>;
+                final participants = List<String>.from(chat['participants'] ?? []);
+                final otherUid = participants.firstWhere(
+                  (uid) => uid != currentUser.uid,
+                  orElse: () => '',
+                );
+                if (otherUid.isEmpty) continue;
+                chatByOtherUid[otherUid] = doc;
+                allUids.add(otherUid);
+              }
 
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.message, color: Colors.grey, size: 60),
-                  SizedBox(height: 16),
-                  Text("Sem mensagens ainda",
-                      style: TextStyle(color: Colors.grey, fontSize: 16)),
-                  SizedBox(height: 8),
-                  Text("Começa uma conversa!",
-                      style: TextStyle(color: Colors.grey, fontSize: 13)),
-                ],
-              ),
-            );
-          }
+              final orderedUids = allUids.toList()
+                ..sort((a, b) {
+                  final chatA =
+                      chatByOtherUid[a]?.data() as Map<String, dynamic>?;
+                  final chatB =
+                      chatByOtherUid[b]?.data() as Map<String, dynamic>?;
+                  final timeA = chatA?['lastMessageAt'] as Timestamp?;
+                  final timeB = chatB?['lastMessageAt'] as Timestamp?;
 
-          final chats = snapshot.data!.docs;
+                  if (timeA == null && timeB == null) return 0;
+                  if (timeA == null) return 1;
+                  if (timeB == null) return -1;
+                  return timeB.compareTo(timeA);
+                });
 
-          return ListView.builder(
-            itemCount: chats.length,
-            itemBuilder: (context, index) {
-              final chat = chats[index].data() as Map<String, dynamic>;
-              final chatId = chats[index].id;
-              final participants =
-                  List<String>.from(chat['participants'] ?? []);
-              final otherUid = participants.firstWhere(
-                (uid) => uid != currentUser?.uid,
-                orElse: () => '',
-              );
->>>>>>> ae3cd4e47011cad52817ad96d225c007f6712ec8
+              if (orderedUids.isEmpty) {
+                return const Center(
+                  child: Text('Nao segues ninguem e ainda nao tens conversas'),
+                );
+              }
 
-              return FutureBuilder<DocumentSnapshot>(
-                future: FirebaseFirestore.instance
-                    .collection('users')
-                    .doc(otherUid)
-                    .get(),
-                builder: (context, userSnap) {
-<<<<<<< HEAD
-                  if (!userSnap.hasData || !userSnap.data!.exists) {
-                    return const SizedBox();
-                  }
-
-                  final userData =
-                      userSnap.data!.data() as Map<String, dynamic>;
-                  final username =
-                      (userData['username'] ?? 'Utilizador').toString();
-
-                  return ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      child: Text(
-                        username.isNotEmpty
-                            ? username[0].toUpperCase()
-                            : '?',
-                      ),
-                    ),
-                    title: Text(username),
-                    onTap: () async {
-                      final chatId =
-                          await _getOrCreateChat(currentUser.uid, otherUid);
-
-=======
-                  if (!userSnap.hasData) return const SizedBox();
-                  final userData =
-                      userSnap.data?.data() as Map<String, dynamic>?;
-                  final username = userData?['username'] ?? 'Utilizador';
-                  final lastMessage = chat['lastMessage'] ?? '';
+              return ListView.builder(
+                itemCount: orderedUids.length,
+                itemBuilder: (context, index) {
+                  final otherUid = orderedUids[index];
+                  final chatDoc = chatByOtherUid[otherUid];
+                  final chatData = chatDoc?.data() as Map<String, dynamic>?;
+                  final lastMessage = (chatData?['lastMessage'] ?? '').toString();
                   final unread =
-                      (chat['unread_${currentUser?.uid}'] ?? 0) as int;
+                      (chatData?['unread_${currentUser.uid}'] ?? 0) as int;
 
-                  return ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: Colors.green,
-                      child: Text(
-                        username.isNotEmpty ? username[0].toUpperCase() : '?',
-                        style: const TextStyle(color: Colors.white),
-                      ),
-                    ),
-                    title: Text(
-                      username,
-                      style: TextStyle(
-                        fontWeight: unread > 0
-                            ? FontWeight.bold
-                            : FontWeight.normal,
-                      ),
-                    ),
-                    subtitle: Text(
-                      lastMessage,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: unread > 0 ? Colors.green : Colors.grey,
-                      ),
-                    ),
-                    trailing: unread > 0
-                        ? CircleAvatar(
-                            radius: 10,
-                            backgroundColor: Colors.green,
-                            child: Text(
-                              '$unread',
-                              style: const TextStyle(
-                                  color: Colors.white, fontSize: 11),
-                            ),
-                          )
-                        : null,
-                    onTap: () {
->>>>>>> ae3cd4e47011cad52817ad96d225c007f6712ec8
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => ChatPage(
-                            chatId: chatId,
-                            otherUid: otherUid,
-                            otherUsername: username,
+                  return FutureBuilder<DocumentSnapshot>(
+                    future: FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(otherUid)
+                        .get(),
+                    builder: (context, userSnap) {
+                      if (!userSnap.hasData || !userSnap.data!.exists) {
+                        return const SizedBox();
+                      }
+
+                      final userData =
+                          userSnap.data!.data() as Map<String, dynamic>;
+                      final username =
+                          (userData['username'] ?? 'Utilizador').toString();
+
+                      return ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: Theme.of(context).colorScheme.primary,
+                          child: Text(
+                            username.isNotEmpty
+                                ? username[0].toUpperCase()
+                                : '?',
+                            style: const TextStyle(color: Colors.white),
                           ),
                         ),
+                        title: Text(
+                          username,
+                          style: TextStyle(
+                            fontWeight: unread > 0
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                          ),
+                        ),
+                        subtitle: Text(
+                          lastMessage.isNotEmpty
+                              ? lastMessage
+                              : 'Toca para enviar mensagem',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        trailing: unread > 0
+                            ? CircleAvatar(
+                                radius: 10,
+                                backgroundColor:
+                                    Theme.of(context).colorScheme.primary,
+                                child: Text(
+                                  '$unread',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              )
+                            : null,
+                        onTap: () async {
+                          final chatId = chatDoc?.id ??
+                              await _getOrCreateChat(currentUser.uid, otherUid);
+
+                          if (!context.mounted) return;
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ChatPage(
+                                chatId: chatId,
+                                otherUid: otherUid,
+                                otherUsername: username,
+                              ),
+                            ),
+                          );
+                        },
                       );
                     },
                   );
@@ -320,8 +301,4 @@ class MessagesListPage extends StatelessWidget {
       ),
     );
   }
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> ae3cd4e47011cad52817ad96d225c007f6712ec8

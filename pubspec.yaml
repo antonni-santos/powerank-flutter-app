@@ -10,16 +10,13 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-<<<<<<< HEAD
   shared_preferences: ^2.2.2
-=======
->>>>>>> ae3cd4e47011cad52817ad96d225c007f6712ec8
   provider: ^6.1.2
   firebase_core: ^2.30.0
   firebase_auth: ^4.19.0
   cloud_firestore: ^4.15.0
-  firebase_storage: ^11.6.0  
-  image_picker: ^1.0.7        
+  firebase_storage: ^11.6.0
+  image_picker: ^1.0.7
   cupertino_icons: ^1.0.8
   sqflite: ^2.3.0
   path: ^1.8.3
@@ -36,7 +33,7 @@ flutter:
     - assets/icons/
     - assets/images/
 
-fonts:
-  - family: SF-Pro-Text
-    fonts:
-      - asset: fonts/SF-Pro-Text-Regular.otf
+  fonts:
+    - family: SF-Pro-Text
+      fonts:
+        - asset: fonts/SF-Pro-Text-Regular.otf

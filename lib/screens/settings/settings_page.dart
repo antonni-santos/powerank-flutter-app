@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../services/theme_notifier.dart';
-import '../Login/login_screen.dart';
-import '../../services/auth_service.dart';
+import 'package:powerank/services/auth_service.dart';
+import 'package:powerank/services/theme_notifier.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -12,53 +11,54 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-
-  void _changePassword() async {
-    final user = await showDialog<String>(
+  Future<void> _changePassword() async {
+    final newPassword = await showDialog<String>(
       context: context,
       builder: (_) {
         final controller = TextEditingController();
         return AlertDialog(
-          title: const Text("Alterar senha"),
+          title: const Text('Alterar senha'),
           content: TextField(
             controller: controller,
             obscureText: true,
             decoration: const InputDecoration(
-              hintText: "Nova senha",
+              hintText: 'Nova senha',
               border: OutlineInputBorder(),
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text("Cancelar"),
+              child: const Text('Cancelar'),
             ),
             TextButton(
               onPressed: () => Navigator.pop(context, controller.text),
-              child: const Text("Guardar"),
+              child: const Text('Guardar'),
             ),
           ],
         );
       },
     );
 
-    if (user != null && user.isNotEmpty) {
-      try {
-        await AuthService().changePassword(user);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Senha alterada com sucesso!"),
-            backgroundColor: Colors.green,
-          ),
-        );
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Erro ao alterar senha. Faz login novamente."),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+    if (newPassword == null || newPassword.isEmpty) return;
+
+    try {
+      await AuthService().changePassword(newPassword);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Senha alterada com sucesso!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Erro ao alterar senha. Faz login novamente.'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -66,22 +66,24 @@ class _SettingsPageState extends State<SettingsPage> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text("Sobre o PoweRank"),
+        title: const Text('Sobre o Powerank'),
         content: const Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("PoweRank é uma app de monitorização de treinos com sistema de ranking competitivo."),
+            Text(
+              'Powerank e uma app de monitorizacao de treinos com sistema de ranking competitivo.',
+            ),
             SizedBox(height: 12),
-            Text("Desenvolvido por Antonni Santos"),
+            Text('Desenvolvido por Antonni Santos'),
             SizedBox(height: 8),
-            Text("Versão 1.0.0"),
+            Text('Versao 1.0.0'),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text("Fechar"),
+            child: const Text('Fechar'),
           ),
         ],
       ),
@@ -95,17 +97,14 @@ class _SettingsPageState extends State<SettingsPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Definições"),
+        title: const Text('Definicoes'),
       ),
-
       body: ListView(
         children: [
-
-          // CONTA
           Padding(
             padding: const EdgeInsets.all(16),
             child: Text(
-              "Conta",
+              'Conta',
               style: TextStyle(
                 color: Colors.grey[600],
                 fontSize: 13,
@@ -113,21 +112,17 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ),
           ),
-
           ListTile(
             leading: const Icon(Icons.lock),
-            title: const Text("Alterar senha"),
+            title: const Text('Alterar senha'),
             trailing: const Icon(Icons.arrow_forward_ios, size: 14),
             onTap: _changePassword,
           ),
-
-          // APARÊNCIA
           const Divider(),
-
           Padding(
             padding: const EdgeInsets.all(16),
             child: Text(
-              "Aparência",
+              'Aparencia',
               style: TextStyle(
                 color: Colors.grey[600],
                 fontSize: 13,
@@ -135,27 +130,18 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ),
           ),
-
-          // 👈 toggle modo claro/escuro
           SwitchListTile(
             secondary: Icon(isDark ? Icons.dark_mode : Icons.light_mode),
-            title: const Text("Modo escuro"),
+            title: const Text('Modo escuro'),
             value: isDark,
-<<<<<<< HEAD
             activeThumbColor: Colors.green,
-=======
-            activeColor: Colors.green,
->>>>>>> ae3cd4e47011cad52817ad96d225c007f6712ec8
             onChanged: (_) => themeNotifier.toggleTheme(),
           ),
-
-          // SOBRE
           const Divider(),
-
           Padding(
             padding: const EdgeInsets.all(16),
             child: Text(
-              "Sobre",
+              'Sobre',
               style: TextStyle(
                 color: Colors.grey[600],
                 fontSize: 13,
@@ -163,20 +149,17 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ),
           ),
-
           ListTile(
             leading: const Icon(Icons.info),
-            title: const Text("Sobre o PoweRank"),
+            title: const Text('Sobre o Powerank'),
             trailing: const Icon(Icons.arrow_forward_ios, size: 14),
             onTap: _showAbout,
           ),
-
           const ListTile(
             leading: Icon(Icons.verified),
-            title: Text("Versão"),
-            trailing: Text("1.0.0"),
+            title: Text('Versao'),
+            trailing: Text('1.0.0'),
           ),
-
         ],
       ),
     );
