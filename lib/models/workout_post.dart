@@ -1,15 +1,18 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class WorkoutPost {
   final String id;
   final String userId;
   String user;
   String time;
   String title;
-  List<Map<String, dynamic>> exercises; 
+  List<Map<String, dynamic>> exercises;
+  List<String> imageUrls;
   int likes;
   int comments;
   List<String> commentsList;
   List<String> likedBy;
-  double totalWeight; 
+  double totalWeight;
 
   WorkoutPost({
     required this.id,
@@ -18,6 +21,7 @@ class WorkoutPost {
     required this.time,
     required this.title,
     required this.exercises,
+    required this.imageUrls,
     required this.likes,
     required this.comments,
     required this.commentsList,
@@ -30,13 +34,23 @@ class WorkoutPost {
       id: id,
       userId: data['userId'] ?? '',
       user: data['userId'] ?? '',
-      time: data['createdAt']?.toDate().toString() ?? 'agora',
+      time: data['createdAt'] is Timestamp
+          ? (data['createdAt'] as Timestamp).toDate().toString()
+          : 'agora',
       title: data['title'] ?? '',
       exercises: List<Map<String, dynamic>>.from(
-        (data['exercises'] ?? []).map((e) =>
-          e is Map ? Map<String, dynamic>.from(e) : {'name': e.toString(), 'weight': 0, 'sets': 0, 'reps': 0}
+        (data['exercises'] ?? []).map(
+          (e) => e is Map
+              ? Map<String, dynamic>.from(e)
+              : {
+                  'name': e.toString(),
+                  'weight': 0,
+                  'sets': 0,
+                  'reps': 0,
+                },
         ),
       ),
+      imageUrls: List<String>.from(data['imageUrls'] ?? []),
       likes: data['likes'] ?? 0,
       comments: data['comments'] ?? 0,
       commentsList: [],

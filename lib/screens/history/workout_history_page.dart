@@ -69,7 +69,7 @@ class WorkoutHistoryPage extends StatelessWidget {
                     style: TextStyle(color: textColor),
                   ),
                   subtitle: Text(
-                    '${workout.exercises.length} exercises',
+                    '${workout.exercises.length} exercises | ${workout.imageUrls.length} fotos',
                     style: TextStyle(color: mutedColor),
                   ),
                   onTap: () {
@@ -77,17 +77,41 @@ class WorkoutHistoryPage extends StatelessWidget {
                       context: context,
                       builder: (_) => AlertDialog(
                         title: Text(workout.title),
-                        content: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: workout.exercises
-                              .map(
+                        content: SingleChildScrollView(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (workout.imageUrls.isNotEmpty) ...[
+                                SizedBox(
+                                  height: 140,
+                                  child: ListView.separated(
+                                    scrollDirection: Axis.horizontal,
+                                    itemCount: workout.imageUrls.length,
+                                    separatorBuilder: (_, __) =>
+                                        const SizedBox(width: 8),
+                                    itemBuilder: (context, imageIndex) {
+                                      return ClipRRect(
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: Image.network(
+                                          workout.imageUrls[imageIndex],
+                                          width: 140,
+                                          fit: BoxFit.cover,
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                              ],
+                              ...workout.exercises.map(
                                 (e) => Padding(
                                   padding: const EdgeInsets.only(bottom: 6),
                                   child: Text(_exerciseDisplay(e)),
                                 ),
-                              )
-                              .toList(),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     );

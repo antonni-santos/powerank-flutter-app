@@ -13,13 +13,17 @@ class FirestoreService {
     return 'Utilizador';
   }
 
-  // 👈 converte os exercícios corretamente
   List<Map<String, dynamic>> _parseExercises(dynamic raw) {
     if (raw == null) return [];
     return (raw as List).map((e) {
       if (e is Map) return Map<String, dynamic>.from(e);
       return {'name': e.toString(), 'weight': 0, 'sets': 0, 'reps': 0};
     }).toList();
+  }
+
+  List<String> _parseImageUrls(dynamic raw) {
+    if (raw == null) return [];
+    return List<String>.from(raw);
   }
 
   Future<List<WorkoutPost>> getWorkouts() async {
@@ -42,7 +46,8 @@ class FirestoreService {
             ? data['createdAt'].toDate().toString()
             : 'agora',
         title: data['title'] ?? '',
-        exercises: _parseExercises(data['exercises']), // 👈 corrigido
+        exercises: _parseExercises(data['exercises']),
+        imageUrls: _parseImageUrls(data['imageUrls']),
         likes: data['likes'] ?? 0,
         comments: data['comments'] ?? 0,
         likedBy: List<String>.from(data['likedBy'] ?? []),
@@ -61,24 +66,27 @@ class FirestoreService {
           .collection('workouts')
           .where('userId', isEqualTo: user.uid)
           .snapshots()
-          .map((snapshot) => snapshot.docs.map((doc) {
-                final data = doc.data();
-                return WorkoutPost(
-                  id: doc.id,
-                  userId: data['userId'] ?? '',
-                  user: username,
-                  time: data['createdAt'] != null
-                      ? data['createdAt'].toDate().toString()
-                      : 'agora',
-                  title: data['title'] ?? '',
-                  exercises: _parseExercises(data['exercises']), 
-                  likes: data['likes'] ?? 0,
-                  comments: data['comments'] ?? 0,
-                  likedBy: List<String>.from(data['likedBy'] ?? []),
-                  commentsList: [],
-                  totalWeight: (data['totalWeight'] ?? 0).toDouble(),
-                );
-              }).toList());
+          .map(
+            (snapshot) => snapshot.docs.map((doc) {
+              final data = doc.data();
+              return WorkoutPost(
+                id: doc.id,
+                userId: data['userId'] ?? '',
+                user: username,
+                time: data['createdAt'] != null
+                    ? data['createdAt'].toDate().toString()
+                    : 'agora',
+                title: data['title'] ?? '',
+                exercises: _parseExercises(data['exercises']),
+                imageUrls: _parseImageUrls(data['imageUrls']),
+                likes: data['likes'] ?? 0,
+                comments: data['comments'] ?? 0,
+                likedBy: List<String>.from(data['likedBy'] ?? []),
+                commentsList: [],
+                totalWeight: (data['totalWeight'] ?? 0).toDouble(),
+              );
+            }).toList(),
+          );
     });
   }
 }

@@ -30,10 +30,4 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/icons/
     - assets/images/
-
-  fonts:
-    - family: SF-Pro-Text
-      fonts:
-        - asset: fonts/SF-Pro-Text-Regular.otf

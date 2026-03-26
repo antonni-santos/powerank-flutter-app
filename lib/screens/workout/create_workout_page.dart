@@ -1,6 +1,10 @@
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:powerank/services/notification_service.dart';
 
 class CreateWorkoutPage extends StatefulWidget {
@@ -41,6 +45,10 @@ class _CreateWorkoutPageState extends State<CreateWorkoutPage> {
   final TextEditingController repsController = TextEditingController();
 
   final List<ExerciseEntry> exercises = [];
+  final List<XFile> _selectedImages = [];
+  final ImagePicker _picker = ImagePicker();
+
+  bool _saving = false;
 
   @override
   void dispose() {
@@ -56,6 +64,58 @@ class _CreateWorkoutPageState extends State<CreateWorkoutPage> {
     final doc =
         await FirebaseFirestore.instance.collection('users').doc(uid).get();
     return (doc.data()?['username'] ?? 'Utilizador').toString();
+  }
+
+  Future<void> _pickFromGallery() async {
+    final images = await _picker.pickMultiImage(imageQuality: 80);
+    if (images.isEmpty) return;
+
+    setState(() {
+      _selectedImages.addAll(images);
+    });
+  }
+
+  Future<void> _pickFromCamera() async {
+    final image = await _picker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 80,
+    );
+    if (image == null) return;
+
+    setState(() {
+      _selectedImages.add(image);
+    });
+  }
+
+  void _removeSelectedImage(int index) {
+    setState(() {
+      _selectedImages.removeAt(index);
+    });
+  }
+
+  Future<List<String>> _uploadImages({
+    required String workoutId,
+    required String userId,
+  }) async {
+    final storage = FirebaseStorage.instance;
+    final imageUrls = <String>[];
+
+    for (int i = 0; i < _selectedImages.length; i++) {
+      final image = _selectedImages[i];
+      final ref = storage.ref().child(
+            'workout_images/$userId/$workoutId/${DateTime.now().millisecondsSinceEpoch}_$i.jpg',
+          );
+
+      await ref.putFile(
+        File(image.path),
+        SettableMetadata(contentType: 'image/jpeg'),
+      );
+
+      final downloadUrl = await ref.getDownloadURL();
+      imageUrls.add(downloadUrl);
+    }
+
+    return imageUrls;
   }
 
   void addExercise() {
@@ -100,36 +160,63 @@ class _CreateWorkoutPageState extends State<CreateWorkoutPage> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    final workoutTitle = workoutNameController.text.trim();
-    final username = await _getCurrentUsername(user.uid);
-
-    final totalWeight = exercises.fold<double>(
-      0,
-      (sum, e) => sum + (e.weight * e.sets * e.reps),
-    );
-
-    final workoutRef =
-        await FirebaseFirestore.instance.collection('workouts').add({
-      'title': workoutTitle,
-      'userId': user.uid,
-      'exercises': exercises.map((e) => e.toMap()).toList(),
-      'totalWeight': totalWeight,
-      'likes': 0,
-      'likedBy': [],
-      'comments': 0,
-      'createdAt': Timestamp.now(),
+    setState(() {
+      _saving = true;
     });
 
-    await NotificationService().sendMentionNotificationsFromText(
-      text: workoutTitle,
-      senderId: user.uid,
-      senderUsername: username,
-      sourceType: 'workout',
-      workoutId: workoutRef.id,
-    );
+    try {
+      final workoutTitle = workoutNameController.text.trim();
+      final username = await _getCurrentUsername(user.uid);
 
-    if (!mounted) return;
-    Navigator.pop(context);
+      final totalWeight = exercises.fold<double>(
+        0,
+        (sum, e) => sum + (e.weight * e.sets * e.reps),
+      );
+
+      final workoutRef =
+          FirebaseFirestore.instance.collection('workouts').doc();
+
+      final imageUrls = await _uploadImages(
+        workoutId: workoutRef.id,
+        userId: user.uid,
+      );
+
+      await workoutRef.set({
+        'title': workoutTitle,
+        'userId': user.uid,
+        'exercises': exercises.map((e) => e.toMap()).toList(),
+        'imageUrls': imageUrls,
+        'totalWeight': totalWeight,
+        'likes': 0,
+        'likedBy': [],
+        'comments': 0,
+        'createdAt': Timestamp.now(),
+      });
+
+      await NotificationService().sendMentionNotificationsFromText(
+        text: workoutTitle,
+        senderId: user.uid,
+        senderUsername: username,
+        sourceType: 'workout',
+        workoutId: workoutRef.id,
+      );
+
+      if (!mounted) return;
+      Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro ao guardar treino: $e'),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _saving = false;
+        });
+      }
+    }
   }
 
   @override
@@ -155,6 +242,76 @@ class _CreateWorkoutPageState extends State<CreateWorkoutPage> {
                 hintText: 'Example: Chest Day',
               ),
             ),
+            const SizedBox(height: 20),
+            const Text(
+              'Fotos do treino',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _pickFromGallery,
+                    icon: const Icon(Icons.photo_library),
+                    label: const Text('Galeria'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _pickFromCamera,
+                    icon: const Icon(Icons.photo_camera),
+                    label: const Text('Camera'),
+                  ),
+                ),
+              ],
+            ),
+            if (_selectedImages.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              SizedBox(
+                height: 100,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _selectedImages.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 10),
+                  itemBuilder: (context, index) {
+                    return Stack(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.file(
+                            File(_selectedImages[index].path),
+                            width: 100,
+                            height: 100,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                        Positioned(
+                          right: 4,
+                          top: 4,
+                          child: GestureDetector(
+                            onTap: () => _removeSelectedImage(index),
+                            child: Container(
+                              decoration: const BoxDecoration(
+                                color: Colors.black54,
+                                shape: BoxShape.circle,
+                              ),
+                              padding: const EdgeInsets.all(4),
+                              child: const Icon(
+                                Icons.close,
+                                size: 16,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ],
             const SizedBox(height: 20),
             const Text(
               'Add Exercise',
@@ -244,8 +401,14 @@ class _CreateWorkoutPageState extends State<CreateWorkoutPage> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: saveWorkout,
-                child: const Text('Save Workout'),
+                onPressed: _saving ? null : saveWorkout,
+                child: _saving
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Save Workout'),
               ),
             ),
           ],
