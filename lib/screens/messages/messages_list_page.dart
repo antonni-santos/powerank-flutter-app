@@ -2,30 +2,30 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:powerank/screens/messages/chat_page.dart';
+import 'package:powerank/screens/messages/create_group_page.dart';
+import 'package:powerank/services/workout_share_service.dart';
 
-class MessagesListPage extends StatelessWidget {
+class MessagesListPage extends StatefulWidget {
   const MessagesListPage({super.key});
 
-  Future<String> _getOrCreateChat(String myUid, String otherUid) async {
-    final existing = await FirebaseFirestore.instance
-        .collection('chats')
-        .where('participants', arrayContains: myUid)
-        .get();
+  @override
+  State<MessagesListPage> createState() => _MessagesListPageState();
+}
 
-    for (final doc in existing.docs) {
-      final parts = List<String>.from(doc.data()['participants'] ?? []);
-      if (parts.contains(otherUid)) return doc.id;
-    }
+class _MessagesListPageState extends State<MessagesListPage>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
 
-    final newChat = await FirebaseFirestore.instance.collection('chats').add({
-      'participants': [myUid, otherUid],
-      'lastMessage': '',
-      'lastMessageAt': FieldValue.serverTimestamp(),
-      'unread_$myUid': 0,
-      'unread_$otherUid': 0,
-    });
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
 
-    return newChat.id;
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   void _showNewMessageDialog(BuildContext context) {
@@ -100,8 +100,11 @@ class MessagesListPage extends StatelessWidget {
                     title: Text((user['username'] ?? '').toString()),
                     onTap: () async {
                       Navigator.pop(context);
-                      final chatId =
-                          await _getOrCreateChat(currentUser!.uid, user['uid']);
+                      final chatId = await WorkoutShareService()
+                          .getOrCreateDirectChat(
+                            currentUser!.uid,
+                            user['uid'].toString(),
+                          );
                       if (!context.mounted) return;
                       Navigator.push(
                         context,
@@ -143,162 +146,289 @@ class MessagesListPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Mensagens'),
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: 'Chats'),
+            Tab(text: 'Grupos'),
+          ],
+        ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.group_add),
+            onPressed: () async {
+              final created = await Navigator.push<bool>(
+                context,
+                MaterialPageRoute(builder: (_) => const CreateGroupPage()),
+              );
+              if (!mounted || created != true) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Grupo criado com sucesso')),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.edit),
             onPressed: () => _showNewMessageDialog(context),
           ),
         ],
       ),
-      body: StreamBuilder<DocumentSnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('users')
-            .doc(currentUser.uid)
-            .snapshots(),
-        builder: (context, followSnap) {
-          if (!followSnap.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          final data = followSnap.data!.data() as Map<String, dynamic>?;
-          final following = List<String>.from(data?['following'] ?? []);
-
-          return StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection('chats')
-                .where('participants', arrayContains: currentUser.uid)
-                .snapshots(),
-            builder: (context, snapshot) {
-              if (!snapshot.hasData) {
-                return const Center(child: CircularProgressIndicator());
-              }
-
-              final chatDocs = snapshot.data!.docs;
-              final Map<String, QueryDocumentSnapshot> chatByOtherUid = {};
-              final allUids = <String>{...following};
-
-              for (final doc in chatDocs) {
-                final chat = doc.data() as Map<String, dynamic>;
-                final participants = List<String>.from(chat['participants'] ?? []);
-                final otherUid = participants.firstWhere(
-                  (uid) => uid != currentUser.uid,
-                  orElse: () => '',
-                );
-                if (otherUid.isEmpty) continue;
-                chatByOtherUid[otherUid] = doc;
-                allUids.add(otherUid);
-              }
-
-              final orderedUids = allUids.toList()
-                ..sort((a, b) {
-                  final chatA =
-                      chatByOtherUid[a]?.data() as Map<String, dynamic>?;
-                  final chatB =
-                      chatByOtherUid[b]?.data() as Map<String, dynamic>?;
-                  final timeA = chatA?['lastMessageAt'] as Timestamp?;
-                  final timeB = chatB?['lastMessageAt'] as Timestamp?;
-
-                  if (timeA == null && timeB == null) return 0;
-                  if (timeA == null) return 1;
-                  if (timeB == null) return -1;
-                  return timeB.compareTo(timeA);
-                });
-
-              if (orderedUids.isEmpty) {
-                return const Center(
-                  child: Text('Nao segues ninguem e ainda nao tens conversas'),
-                );
-              }
-
-              return ListView.builder(
-                itemCount: orderedUids.length,
-                itemBuilder: (context, index) {
-                  final otherUid = orderedUids[index];
-                  final chatDoc = chatByOtherUid[otherUid];
-                  final chatData = chatDoc?.data() as Map<String, dynamic>?;
-                  final lastMessage = (chatData?['lastMessage'] ?? '').toString();
-                  final unread =
-                      (chatData?['unread_${currentUser.uid}'] ?? 0) as int;
-
-                  return FutureBuilder<DocumentSnapshot>(
-                    future: FirebaseFirestore.instance
-                        .collection('users')
-                        .doc(otherUid)
-                        .get(),
-                    builder: (context, userSnap) {
-                      if (!userSnap.hasData || !userSnap.data!.exists) {
-                        return const SizedBox();
-                      }
-
-                      final userData =
-                          userSnap.data!.data() as Map<String, dynamic>;
-                      final username =
-                          (userData['username'] ?? 'Utilizador').toString();
-
-                      return ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: Theme.of(context).colorScheme.primary,
-                          child: Text(
-                            username.isNotEmpty
-                                ? username[0].toUpperCase()
-                                : '?',
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                        ),
-                        title: Text(
-                          username,
-                          style: TextStyle(
-                            fontWeight: unread > 0
-                                ? FontWeight.bold
-                                : FontWeight.normal,
-                          ),
-                        ),
-                        subtitle: Text(
-                          lastMessage.isNotEmpty
-                              ? lastMessage
-                              : 'Toca para enviar mensagem',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        trailing: unread > 0
-                            ? CircleAvatar(
-                                radius: 10,
-                                backgroundColor:
-                                    Theme.of(context).colorScheme.primary,
-                                child: Text(
-                                  '$unread',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 11,
-                                  ),
-                                ),
-                              )
-                            : null,
-                        onTap: () async {
-                          final chatId = chatDoc?.id ??
-                              await _getOrCreateChat(currentUser.uid, otherUid);
-
-                          if (!context.mounted) return;
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => ChatPage(
-                                chatId: chatId,
-                                otherUid: otherUid,
-                                otherUsername: username,
-                              ),
-                            ),
-                          );
-                        },
-                      );
-                    },
-                  );
-                },
-              );
-            },
-          );
-        },
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _DirectMessagesTab(currentUserId: currentUser.uid),
+          _GroupMessagesTab(currentUserId: currentUser.uid),
+        ],
       ),
+    );
+  }
+}
+
+class _DirectMessagesTab extends StatelessWidget {
+  final String currentUserId;
+
+  const _DirectMessagesTab({required this.currentUserId});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUserId)
+          .snapshots(),
+      builder: (context, followSnap) {
+        if (!followSnap.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final data = followSnap.data!.data() as Map<String, dynamic>?;
+        final following = List<String>.from(data?['following'] ?? []);
+
+        return StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('chats')
+              .where('participants', arrayContains: currentUserId)
+              .snapshots(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            final chatDocs = snapshot.data!.docs;
+            final Map<String, QueryDocumentSnapshot> chatByOtherUid = {};
+            final allUids = <String>{...following};
+
+            for (final doc in chatDocs) {
+              final chat = doc.data() as Map<String, dynamic>;
+              final participants = List<String>.from(chat['participants'] ?? []);
+              final otherUid = participants.firstWhere(
+                (uid) => uid != currentUserId,
+                orElse: () => '',
+              );
+              if (otherUid.isEmpty) continue;
+              chatByOtherUid[otherUid] = doc;
+              allUids.add(otherUid);
+            }
+
+            final orderedUids = allUids.toList()
+              ..sort((a, b) {
+                final chatA = chatByOtherUid[a]?.data() as Map<String, dynamic>?;
+                final chatB = chatByOtherUid[b]?.data() as Map<String, dynamic>?;
+                final timeA = chatA?['lastMessageAt'] as Timestamp?;
+                final timeB = chatB?['lastMessageAt'] as Timestamp?;
+
+                if (timeA == null && timeB == null) return 0;
+                if (timeA == null) return 1;
+                if (timeB == null) return -1;
+                return timeB.compareTo(timeA);
+              });
+
+            if (orderedUids.isEmpty) {
+              return const Center(
+                child: Text('Nao segues ninguem e ainda nao tens conversas'),
+              );
+            }
+
+            return ListView.builder(
+              itemCount: orderedUids.length,
+              itemBuilder: (context, index) {
+                final otherUid = orderedUids[index];
+                final chatDoc = chatByOtherUid[otherUid];
+                final chatData = chatDoc?.data() as Map<String, dynamic>?;
+                final lastMessage = (chatData?['lastMessage'] ?? '').toString();
+                final unread = (chatData?['unread_$currentUserId'] ?? 0) as int;
+
+                return FutureBuilder<DocumentSnapshot>(
+                  future: FirebaseFirestore.instance
+                      .collection('users')
+                      .doc(otherUid)
+                      .get(),
+                  builder: (context, userSnap) {
+                    if (!userSnap.hasData || !userSnap.data!.exists) {
+                      return const SizedBox();
+                    }
+
+                    final userData =
+                        userSnap.data!.data() as Map<String, dynamic>;
+                    final username =
+                        (userData['username'] ?? 'Utilizador').toString();
+
+                    return ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        child: Text(
+                          username.isNotEmpty ? username[0].toUpperCase() : '?',
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                      ),
+                      title: Text(
+                        username,
+                        style: TextStyle(
+                          fontWeight:
+                              unread > 0 ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
+                      subtitle: Text(
+                        lastMessage.isNotEmpty
+                            ? lastMessage
+                            : 'Toca para enviar mensagem',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      trailing: unread > 0
+                          ? CircleAvatar(
+                              radius: 10,
+                              backgroundColor:
+                                  Theme.of(context).colorScheme.primary,
+                              child: Text(
+                                '$unread',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            )
+                          : null,
+                      onTap: () async {
+                        final chatId = chatDoc?.id ??
+                            await WorkoutShareService()
+                                .getOrCreateDirectChat(currentUserId, otherUid);
+
+                        if (!context.mounted) return;
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ChatPage(
+                              chatId: chatId,
+                              otherUid: otherUid,
+                              otherUsername: username,
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class _GroupMessagesTab extends StatelessWidget {
+  final String currentUserId;
+
+  const _GroupMessagesTab({required this.currentUserId});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('workout_groups')
+          .where('members', arrayContains: currentUserId)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final groups = snapshot.data!.docs.toList()
+          ..sort((a, b) {
+            final aTs = a.data()['lastMessageAt'] as Timestamp?;
+            final bTs = b.data()['lastMessageAt'] as Timestamp?;
+            if (aTs == null && bTs == null) return 0;
+            if (aTs == null) return 1;
+            if (bTs == null) return -1;
+            return bTs.compareTo(aTs);
+          });
+
+        if (groups.isEmpty) {
+          return const Center(
+            child: Text('Ainda nao tens grupos de treino'),
+          );
+        }
+
+        return ListView.builder(
+          itemCount: groups.length,
+          itemBuilder: (context, index) {
+            final doc = groups[index];
+            final data = doc.data();
+            final name = (data['name'] ?? 'Grupo').toString();
+            final lastMessage = (data['lastMessage'] ?? '').toString();
+            final members = List<String>.from(data['members'] ?? []);
+            final unread = (data['unread_$currentUserId'] ?? 0) as int;
+
+            return ListTile(
+              leading: CircleAvatar(
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                child: const Icon(Icons.groups, color: Colors.white),
+              ),
+              title: Text(
+                name,
+                style: TextStyle(
+                  fontWeight:
+                      unread > 0 ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+              subtitle: Text(
+                lastMessage.isNotEmpty ? lastMessage : '${members.length} membros',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              trailing: unread > 0
+                  ? CircleAvatar(
+                      radius: 10,
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      child: Text(
+                        '$unread',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                        ),
+                      ),
+                    )
+                  : null,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ChatPage(
+                      chatId: doc.id,
+                      otherUid: '',
+                      otherUsername: name,
+                      isGroupChat: true,
+                      groupMembers: members,
+                    ),
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
     );
   }
 }

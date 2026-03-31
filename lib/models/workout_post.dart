@@ -8,6 +8,7 @@ class WorkoutPost {
   String title;
   List<Map<String, dynamic>> exercises;
   List<String> imageUrls;
+  List<String> videoUrls;
   int likes;
   int comments;
   List<String> commentsList;
@@ -22,6 +23,7 @@ class WorkoutPost {
     required this.title,
     required this.exercises,
     required this.imageUrls,
+    required this.videoUrls,
     required this.likes,
     required this.comments,
     required this.commentsList,
@@ -33,7 +35,7 @@ class WorkoutPost {
     return WorkoutPost(
       id: id,
       userId: data['userId'] ?? '',
-      user: data['userId'] ?? '',
+      user: (data['username'] ?? data['userId'] ?? '').toString(),
       time: data['createdAt'] is Timestamp
           ? (data['createdAt'] as Timestamp).toDate().toString()
           : 'agora',
@@ -51,6 +53,7 @@ class WorkoutPost {
         ),
       ),
       imageUrls: List<String>.from(data['imageUrls'] ?? []),
+      videoUrls: List<String>.from(data['videoUrls'] ?? []),
       likes: data['likes'] ?? 0,
       comments: data['comments'] ?? 0,
       commentsList: [],

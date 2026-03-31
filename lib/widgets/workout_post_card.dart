@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:powerank/models/workout_post.dart';
 import 'package:powerank/screens/comments/comments_page.dart';
+import 'package:powerank/screens/social/public_profile_page.dart';
+import 'package:powerank/widgets/workout_share_sheet.dart';
 
 class WorkoutPostCard extends StatefulWidget {
   final WorkoutPost post;
@@ -97,6 +99,14 @@ class _WorkoutPostCardState extends State<WorkoutPostCard> {
         .delete();
   }
 
+  void _openShareSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => WorkoutShareSheet(post: widget.post),
+    );
+  }
+
   String _exerciseDisplay(dynamic exercise) {
     if (exercise is Map) {
       final name = exercise['name'] ?? '';
@@ -125,36 +135,49 @@ class _WorkoutPostCardState extends State<WorkoutPostCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  backgroundColor: theme.colorScheme.primary,
-                  child: Text(
-                    post.user.isNotEmpty ? post.user[0] : '?',
-                    style: TextStyle(color: theme.colorScheme.onPrimary),
+            InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: isOwner
+                  ? null
+                  : () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => PublicProfilePage(userId: post.userId),
+                        ),
+                      );
+                    },
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    backgroundColor: theme.colorScheme.primary,
+                    child: Text(
+                      post.user.isNotEmpty ? post.user[0] : '?',
+                      style: TextStyle(color: theme.colorScheme.onPrimary),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      post.user,
-                      style: TextStyle(
-                        color: textColor,
-                        fontWeight: FontWeight.bold,
+                  const SizedBox(width: 10),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        post.user,
+                        style: TextStyle(
+                          color: textColor,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    Text(
-                      post.time,
-                      style: TextStyle(
-                        color: mutedColor,
-                        fontSize: 12,
+                      Text(
+                        post.time,
+                        style: TextStyle(
+                          color: mutedColor,
+                          fontSize: 12,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 10),
             Text(
@@ -192,6 +215,29 @@ class _WorkoutPostCardState extends State<WorkoutPostCard> {
                 ),
               ),
             ],
+            if (post.videoUrls.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.videocam, color: theme.colorScheme.primary),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '${post.videoUrls.length} video(s) anexado(s)',
+                        style: TextStyle(color: textColor),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 10),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -219,7 +265,7 @@ class _WorkoutPostCardState extends State<WorkoutPostCard> {
                       onPressed: toggleLike,
                     ),
                     Text('$likesCount', style: TextStyle(color: textColor)),
-                    const SizedBox(width: 20),
+                    const SizedBox(width: 10),
                     IconButton(
                       icon: Icon(Icons.comment, color: textColor),
                       onPressed: () {
@@ -232,6 +278,11 @@ class _WorkoutPostCardState extends State<WorkoutPostCard> {
                       },
                     ),
                     Text('${post.comments}', style: TextStyle(color: textColor)),
+                    const SizedBox(width: 10),
+                    IconButton(
+                      icon: Icon(Icons.send, color: textColor),
+                      onPressed: _openShareSheet,
+                    ),
                   ],
                 ),
                 if (isOwner)

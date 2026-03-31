@@ -9,6 +9,7 @@ import 'package:powerank/models/workout_post.dart';
 import 'package:powerank/services/firestore_service.dart';
 import 'package:powerank/widgets/app_drawer.dart';
 import 'package:powerank/widgets/notification_menu_button.dart';
+import 'package:powerank/widgets/workout_share_sheet.dart';
 
 class WorkoutHistoryPage extends StatelessWidget {
   const WorkoutHistoryPage({super.key});
@@ -36,48 +37,104 @@ class WorkoutHistoryPage extends StatelessWidget {
 
     if (result == null) return;
 
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
 
-    final userDoc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .get();
-    final username = (userDoc.data()?['username'] ?? 'Utilizador').toString();
-    final isPrivate = userDoc.data()?['isPrivate'] == true;
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+      final username = (userDoc.data()?['username'] ?? 'Utilizador').toString();
+      final isPrivate = userDoc.data()?['isPrivate'] == true;
 
-    final urls = <String>[];
-    if (result.images.isNotEmpty) {
+      final imageUrls = <String>[];
       for (int i = 0; i < result.images.length; i++) {
         final ref = FirebaseStorage.instance.ref().child(
-          'history_posts/${user.uid}/${DateTime.now().millisecondsSinceEpoch}_$i.jpg',
+          'history_posts/${user.uid}/images/${DateTime.now().millisecondsSinceEpoch}_$i.jpg',
         );
         await ref.putFile(
           File(result.images[i].path),
           SettableMetadata(contentType: 'image/jpeg'),
         );
-        urls.add(await ref.getDownloadURL());
+        imageUrls.add(await ref.getDownloadURL());
       }
-    }
 
-    await FirebaseFirestore.instance.collection('feed_posts').add({
-      'title': workout.title,
-      'userId': user.uid,
-      'username': username,
-      'templateId': workout.id,
-      'authorIsPrivate': isPrivate,
-      'exercises': workout.exercises,
-      'imageUrls': urls,
-      'totalWeight': workout.totalWeight,
-      'likes': 0,
-      'likedBy': [],
-      'comments': 0,
-      'createdAt': Timestamp.now(),
-    });
+      final videoUrls = <String>[];
+      for (int i = 0; i < result.videos.length; i++) {
+        final ref = FirebaseStorage.instance.ref().child(
+          'history_posts/${user.uid}/videos/${DateTime.now().millisecondsSinceEpoch}_$i.mp4',
+        );
+        await ref.putFile(
+          File(result.videos[i].path),
+          SettableMetadata(contentType: 'video/mp4'),
+        );
+        videoUrls.add(await ref.getDownloadURL());
+      }
+
+      await FirebaseFirestore.instance.collection('feed_posts').add({
+        'title': workout.title,
+        'userId': user.uid,
+        'username': username,
+        'templateId': workout.id,
+        'authorIsPrivate': isPrivate,
+        'exercises': workout.exercises,
+        'imageUrls': imageUrls,
+        'videoUrls': videoUrls,
+        'totalWeight': workout.totalWeight,
+        'likes': 0,
+        'likedBy': [],
+        'comments': 0,
+        'createdAt': Timestamp.now(),
+      });
+
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Treino publicado no feed!')),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao publicar no feed: $e')),
+      );
+    }
+  }
+
+  Future<void> _deleteWorkout(
+    BuildContext context,
+    WorkoutPost workout,
+  ) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Eliminar treino'),
+        content: Text('Queres eliminar "${workout.title}" do History?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text(
+              'Eliminar',
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    await FirebaseFirestore.instance
+        .collection('workout_templates')
+        .doc(workout.id)
+        .delete();
 
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Treino publicado no feed!')),
+      const SnackBar(content: Text('Treino eliminado do History')),
     );
   }
 
@@ -132,12 +189,31 @@ class WorkoutHistoryPage extends StatelessWidget {
                     style: TextStyle(color: textColor),
                   ),
                   subtitle: Text(
-                    '${workout.exercises.length} exercícios',
+                    '${workout.exercises.length} exercicios',
                     style: TextStyle(color: mutedColor),
                   ),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.publish, color: Colors.green),
-                    onPressed: () => _publishWorkout(context, workout),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.send, color: Colors.blue),
+                        onPressed: () {
+                          showModalBottomSheet<void>(
+                            context: context,
+                            isScrollControlled: true,
+                            builder: (_) => WorkoutShareSheet(post: workout),
+                          );
+                        },
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.publish, color: Colors.green),
+                        onPressed: () => _publishWorkout(context, workout),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.red),
+                        onPressed: () => _deleteWorkout(context, workout),
+                      ),
+                    ],
                   ),
                   onTap: () {
                     showDialog(
@@ -171,8 +247,12 @@ class WorkoutHistoryPage extends StatelessWidget {
 
 class _HistoryPublishResult {
   final List<XFile> images;
+  final List<XFile> videos;
 
-  _HistoryPublishResult({required this.images});
+  _HistoryPublishResult({
+    required this.images,
+    required this.videos,
+  });
 }
 
 class _HistoryPublishSheet extends StatefulWidget {
@@ -187,6 +267,7 @@ class _HistoryPublishSheet extends StatefulWidget {
 class _HistoryPublishSheetState extends State<_HistoryPublishSheet> {
   final ImagePicker _picker = ImagePicker();
   final List<XFile> _images = [];
+  final List<XFile> _videos = [];
 
   Future<void> _pickFromGallery() async {
     final images = await _picker.pickMultiImage(imageQuality: 80);
@@ -201,6 +282,18 @@ class _HistoryPublishSheetState extends State<_HistoryPublishSheet> {
     );
     if (image == null) return;
     setState(() => _images.add(image));
+  }
+
+  Future<void> _pickVideoFromGallery() async {
+    final video = await _picker.pickVideo(source: ImageSource.gallery);
+    if (video == null) return;
+    setState(() => _videos.add(video));
+  }
+
+  Future<void> _pickVideoFromCamera() async {
+    final video = await _picker.pickVideo(source: ImageSource.camera);
+    if (video == null) return;
+    setState(() => _videos.add(video));
   }
 
   @override
@@ -225,7 +318,7 @@ class _HistoryPublishSheetState extends State<_HistoryPublishSheet> {
                 ),
               ),
               const SizedBox(height: 12),
-              const Text('Queres adicionar fotos a esta publicação?'),
+              const Text('Queres adicionar fotos ou videos a esta publicacao?'),
               const SizedBox(height: 10),
               Row(
                 children: [
@@ -233,7 +326,7 @@ class _HistoryPublishSheetState extends State<_HistoryPublishSheet> {
                     child: OutlinedButton.icon(
                       onPressed: _pickFromGallery,
                       icon: const Icon(Icons.photo_library),
-                      label: const Text('Galeria'),
+                      label: const Text('Fotos'),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -242,6 +335,26 @@ class _HistoryPublishSheetState extends State<_HistoryPublishSheet> {
                       onPressed: _pickFromCamera,
                       icon: const Icon(Icons.photo_camera),
                       label: const Text('Camera'),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _pickVideoFromGallery,
+                      icon: const Icon(Icons.video_library),
+                      label: const Text('Video'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _pickVideoFromCamera,
+                      icon: const Icon(Icons.videocam),
+                      label: const Text('Gravar'),
                     ),
                   ),
                 ],
@@ -265,12 +378,18 @@ class _HistoryPublishSheetState extends State<_HistoryPublishSheet> {
                   ),
                 ),
               ],
+              if (_videos.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Text('${_videos.length} video(s) selecionado(s)'),
+              ],
               const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () =>
-                      Navigator.pop(context, _HistoryPublishResult(images: _images)),
+                  onPressed: () => Navigator.pop(
+                    context,
+                    _HistoryPublishResult(images: _images, videos: _videos),
+                  ),
                   child: const Text('Publicar no feed'),
                 ),
               ),

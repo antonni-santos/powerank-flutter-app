@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:powerank/screens/social/public_profile_page.dart';
 
 class UserConnectionsPage extends StatefulWidget {
   final String userId;
@@ -70,6 +71,14 @@ class _UserConnectionsPageState extends State<UserConnectionsPage>
               ),
               title: Text(username),
               subtitle: Text(isPrivate ? 'Privado' : 'Publico'),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => PublicProfilePage(userId: ids[index]),
+                  ),
+                );
+              },
             );
           },
         );

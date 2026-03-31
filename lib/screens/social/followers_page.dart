@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:powerank/screens/social/public_profile_page.dart';
 import 'package:powerank/services/notification_service.dart';
 
 class FollowersPage extends StatefulWidget {
@@ -304,6 +305,16 @@ class _FollowersPageState extends State<FollowersPage>
                           isPrivate ? 'Privado' : 'Publico',
                           style: const TextStyle(fontSize: 12),
                         ),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => PublicProfilePage(
+                                userId: following[index],
+                              ),
+                            ),
+                          );
+                        },
                         trailing: OutlinedButton(
                           onPressed: () => _unfollowUser(following[index]),
                           style: OutlinedButton.styleFrom(
@@ -365,6 +376,14 @@ class _FollowersPageState extends State<FollowersPage>
                       'Quer seguir-te',
                       style: TextStyle(color: Colors.grey, fontSize: 12),
                     ),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => PublicProfilePage(userId: fromId),
+                        ),
+                      );
+                    },
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -440,6 +459,14 @@ class _FollowersPageState extends State<FollowersPage>
                             isPrivate ? 'Privado' : 'Publico',
                             style: const TextStyle(fontSize: 12),
                           ),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => PublicProfilePage(userId: uid),
+                              ),
+                            );
+                          },
                           trailing: isFollowing
                               ? OutlinedButton(
                                   onPressed: () => _unfollowUser(uid),

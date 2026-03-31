@@ -1,11 +1,13 @@
 import 'dart:io';
 
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:powerank/models/workout_post.dart';
+import 'package:powerank/screens/social/user_search_page.dart';
 import 'package:powerank/screens/workout/create_workout_page.dart';
 import 'package:powerank/widgets/app_drawer.dart';
 import 'package:powerank/widgets/notification_menu_button.dart';
@@ -52,6 +54,7 @@ class _HomeFeedPageState extends State<HomeFeedPage> {
         ),
       ),
       imageUrls: List<String>.from(data['imageUrls'] ?? []),
+      videoUrls: List<String>.from(data['videoUrls'] ?? []),
       likes: data['likes'] ?? 0,
       comments: data['comments'] ?? 0,
       commentsList: [],
@@ -64,10 +67,8 @@ class _HomeFeedPageState extends State<HomeFeedPage> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    final doc = await FirebaseFirestore.instance
-        .collection('checkins')
-        .doc(user.uid)
-        .get();
+    final doc =
+        await FirebaseFirestore.instance.collection('checkins').doc(user.uid).get();
 
     final data = doc.data() ?? {};
     final entries = Map<String, dynamic>.from(data['entries'] ?? {});
@@ -89,59 +90,70 @@ class _HomeFeedPageState extends State<HomeFeedPage> {
     }
   }
 
-  Future<List<String>> _uploadCompletionImages({
+  Future<List<String>> _uploadImages({
     required String userId,
     required List<XFile> images,
   }) async {
     if (images.isEmpty) return [];
-
     final imageUrls = <String>[];
 
     for (int i = 0; i < images.length; i++) {
       final ref = FirebaseStorage.instance.ref().child(
-        'completed_workouts/$userId/${DateTime.now().millisecondsSinceEpoch}_$i.jpg',
+        'completed_workouts/$userId/images/${DateTime.now().millisecondsSinceEpoch}_$i.jpg',
       );
-
       await ref.putFile(
         File(images[i].path),
         SettableMetadata(contentType: 'image/jpeg'),
       );
-
       imageUrls.add(await ref.getDownloadURL());
     }
 
     return imageUrls;
   }
 
+  Future<List<String>> _uploadVideos({
+    required String userId,
+    required List<XFile> videos,
+  }) async {
+    if (videos.isEmpty) return [];
+    final videoUrls = <String>[];
+
+    for (int i = 0; i < videos.length; i++) {
+      final ref = FirebaseStorage.instance.ref().child(
+        'completed_workouts/$userId/videos/${DateTime.now().millisecondsSinceEpoch}_$i.mp4',
+      );
+      await ref.putFile(
+        File(videos[i].path),
+        SettableMetadata(contentType: 'video/mp4'),
+      );
+      videoUrls.add(await ref.getDownloadURL());
+    }
+
+    return videoUrls;
+  }
+
   Future<void> _removeTodayCheckIn() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    final checkinDoc = await FirebaseFirestore.instance
-        .collection('checkins')
-        .doc(user.uid)
-        .get();
+    final checkinDoc =
+        await FirebaseFirestore.instance.collection('checkins').doc(user.uid).get();
 
     final data = checkinDoc.data() ?? {};
     final entries = Map<String, dynamic>.from(data['entries'] ?? {});
     final todayEntry = entries[_todayKey()];
-
     String? feedPostId;
+
     if (todayEntry is Map) {
       feedPostId = todayEntry['feedPostId']?.toString();
     }
 
     if (feedPostId != null && feedPostId.isNotEmpty) {
-      await FirebaseFirestore.instance
-          .collection('feed_posts')
-          .doc(feedPostId)
-          .delete();
+      await FirebaseFirestore.instance.collection('feed_posts').doc(feedPostId).delete();
     }
 
     await FirebaseFirestore.instance.collection('checkins').doc(user.uid).set({
-      'entries': {
-        _todayKey(): FieldValue.delete(),
-      },
+      'entries': {_todayKey(): FieldValue.delete()},
     }, SetOptions(merge: true));
 
     if (!mounted) return;
@@ -161,24 +173,19 @@ class _HomeFeedPageState extends State<HomeFeedPage> {
     setState(() => _savingCheckIn = true);
 
     try {
-      final userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .get();
+      final userDoc =
+          await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
 
       final username = (userDoc.data()?['username'] ?? 'Utilizador').toString();
       final isPrivate = userDoc.data()?['isPrivate'] == true;
 
-      final imageUrls = await _uploadCompletionImages(
-        userId: user.uid,
-        images: completion.images,
-      );
+      final imageUrls = await _uploadImages(userId: user.uid, images: completion.images);
+      final videoUrls = await _uploadVideos(userId: user.uid, videos: completion.videos);
 
       String? feedPostId;
 
       if (completion.postToFeed) {
-        final postRef =
-            FirebaseFirestore.instance.collection('feed_posts').doc();
+        final postRef = FirebaseFirestore.instance.collection('feed_posts').doc();
 
         await postRef.set({
           'title': workout.title,
@@ -188,6 +195,7 @@ class _HomeFeedPageState extends State<HomeFeedPage> {
           'authorIsPrivate': isPrivate,
           'exercises': workout.exercises,
           'imageUrls': imageUrls,
+          'videoUrls': videoUrls,
           'totalWeight': workout.totalWeight,
           'likes': 0,
           'likedBy': [],
@@ -204,6 +212,7 @@ class _HomeFeedPageState extends State<HomeFeedPage> {
             'workoutId': workout.id,
             'workoutTitle': workout.title,
             'imageUrls': imageUrls,
+            'videoUrls': videoUrls,
             'postedToFeed': completion.postToFeed,
             'feedPostId': feedPostId,
             'checkedAt': Timestamp.now(),
@@ -226,10 +235,13 @@ class _HomeFeedPageState extends State<HomeFeedPage> {
           ),
         ),
       );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao publicar treino: $e')),
+      );
     } finally {
-      if (mounted) {
-        setState(() => _savingCheckIn = false);
-      }
+      if (mounted) setState(() => _savingCheckIn = false);
     }
   }
 
@@ -250,10 +262,7 @@ class _HomeFeedPageState extends State<HomeFeedPage> {
 
     if (!mounted || completion == null) return;
 
-    await _saveTodayWorkout(
-      workout: selectedWorkout,
-      completion: completion,
-    );
+    await _saveTodayWorkout(workout: selectedWorkout, completion: completion);
   }
 
   Future<void> _showTodayOptions() async {
@@ -295,6 +304,15 @@ class _HomeFeedPageState extends State<HomeFeedPage> {
       appBar: AppBar(
         title: const Text('Powerank'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.search),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const UserSearchPage()),
+              );
+            },
+          ),
           Builder(
             builder: (context) => NotificationMenuButton(
               onPressed: () => Scaffold.of(context).openEndDrawer(),
@@ -374,9 +392,7 @@ class _HomeFeedPageState extends State<HomeFeedPage> {
                 final following = Set<String>.from(userData?['following'] ?? []);
 
                 return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                  stream: FirebaseFirestore.instance
-                      .collection('feed_posts')
-                      .snapshots(),
+                  stream: FirebaseFirestore.instance.collection('feed_posts').snapshots(),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator());
@@ -391,18 +407,20 @@ class _HomeFeedPageState extends State<HomeFeedPage> {
                       );
                     }
 
-                    final posts = snapshot.data!.docs
-                        .map(_postFromDoc)
-                        .toList()
-                      ..sort((a, b) => b.time.compareTo(a.time));
+                    final docs = snapshot.data!.docs.toList()
+                      ..sort((a, b) {
+                        final aTs = a.data()['createdAt'] as Timestamp?;
+                        final bTs = b.data()['createdAt'] as Timestamp?;
+                        return (bTs?.millisecondsSinceEpoch ?? 0)
+                            .compareTo(aTs?.millisecondsSinceEpoch ?? 0);
+                      });
+                    final posts = docs.map(_postFromDoc).toList();
 
                     final followingPosts = <WorkoutPost>[];
                     final suggestedPosts = <WorkoutPost>[];
 
                     for (final post in posts) {
-                      final raw = snapshot.data!.docs
-                          .firstWhere((doc) => doc.id == post.id)
-                          .data();
+                      final raw = docs.firstWhere((doc) => doc.id == post.id).data();
                       final isPrivate = raw['authorIsPrivate'] == true;
                       final isMine = post.userId == currentUser?.uid;
                       final isFollowing = following.contains(post.userId);
@@ -425,6 +443,8 @@ class _HomeFeedPageState extends State<HomeFeedPage> {
                       );
                     }
 
+                    bool suggestedHeaderShown = false;
+
                     return ListView.builder(
                       padding: const EdgeInsets.all(16),
                       itemCount: ordered.length,
@@ -433,10 +453,17 @@ class _HomeFeedPageState extends State<HomeFeedPage> {
                         final isSuggested = !following.contains(post.userId) &&
                             post.userId != currentUser?.uid;
 
+                        final showSuggestedHeader =
+                            isSuggested && !suggestedHeaderShown;
+
+                        if (showSuggestedHeader) {
+                          suggestedHeaderShown = true;
+                        }
+
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            if (isSuggested && (index == 0 || ordered[index - 1].userId == currentUser?.uid || following.contains(ordered[index - 1].userId)))
+                            if (showSuggestedHeader)
                               Padding(
                                 padding: const EdgeInsets.only(bottom: 8),
                                 child: Text(
@@ -476,10 +503,12 @@ class _HomeFeedPageState extends State<HomeFeedPage> {
 class _CompletionResult {
   final bool postToFeed;
   final List<XFile> images;
+  final List<XFile> videos;
 
   _CompletionResult({
     required this.postToFeed,
     required this.images,
+    required this.videos,
   });
 }
 
@@ -504,6 +533,7 @@ class _WorkoutSelectorSheet extends StatelessWidget {
         ),
       ),
       imageUrls: List<String>.from(data['imageUrls'] ?? []),
+      videoUrls: List<String>.from(data['videoUrls'] ?? []),
       likes: data['likes'] ?? 0,
       comments: data['comments'] ?? 0,
       commentsList: [],
@@ -563,7 +593,7 @@ class _WorkoutSelectorSheet extends StatelessWidget {
                           child: ListTile(
                             leading: const Icon(Icons.fitness_center),
                             title: Text(workout.title),
-                            subtitle: Text('${workout.exercises.length} exercícios'),
+                            subtitle: Text('${workout.exercises.length} exercicios'),
                             trailing: const Icon(Icons.chevron_right),
                             onTap: () => Navigator.pop(context, workout),
                           ),
@@ -593,6 +623,7 @@ class _WorkoutCompletionSheet extends StatefulWidget {
 class _WorkoutCompletionSheetState extends State<_WorkoutCompletionSheet> {
   final ImagePicker _picker = ImagePicker();
   final List<XFile> _images = [];
+  final List<XFile> _videos = [];
   bool _postToFeed = false;
 
   Future<void> _pickFromGallery() async {
@@ -601,13 +632,16 @@ class _WorkoutCompletionSheetState extends State<_WorkoutCompletionSheet> {
     setState(() => _images.addAll(images));
   }
 
-  Future<void> _pickFromCamera() async {
-    final image = await _picker.pickImage(
-      source: ImageSource.camera,
-      imageQuality: 80,
-    );
-    if (image == null) return;
-    setState(() => _images.add(image));
+  Future<void> _pickVideo() async {
+    final video = await _picker.pickVideo(source: ImageSource.gallery);
+    if (video == null) return;
+    setState(() => _videos.add(video));
+  }
+
+  Future<void> _pickVideoCamera() async {
+    final video = await _picker.pickVideo(source: ImageSource.camera);
+    if (video == null) return;
+    setState(() => _videos.add(video));
   }
 
   @override
@@ -629,7 +663,7 @@ class _WorkoutCompletionSheetState extends State<_WorkoutCompletionSheet> {
                 style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
-              const Text('Podes tirar foto ou escolher da galeria.'),
+              const Text('Podes adicionar imagens e videos.'),
               const SizedBox(height: 10),
               Row(
                 children: [
@@ -637,23 +671,37 @@ class _WorkoutCompletionSheetState extends State<_WorkoutCompletionSheet> {
                     child: OutlinedButton.icon(
                       onPressed: _pickFromGallery,
                       icon: const Icon(Icons.photo_library),
-                      label: const Text('Galeria'),
+                      label: const Text('Imagens'),
                     ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: _pickFromCamera,
-                      icon: const Icon(Icons.photo_camera),
-                      label: const Text('Camera'),
+                      onPressed: _pickVideo,
+                      icon: const Icon(Icons.video_library),
+                      label: const Text('Video'),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _pickVideoCamera,
+                      icon: const Icon(Icons.videocam),
+                      label: const Text('Gravar video'),
                     ),
                   ),
                 ],
               ),
               if (_images.isNotEmpty) ...[
                 const SizedBox(height: 12),
+                const Text('Imagens escolhidas'),
+                const SizedBox(height: 8),
                 SizedBox(
-                  height: 100,
+                  height: 90,
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
                     itemCount: _images.length,
@@ -661,13 +709,16 @@ class _WorkoutCompletionSheetState extends State<_WorkoutCompletionSheet> {
                     itemBuilder: (context, index) {
                       return Image.file(
                         File(_images[index].path),
-                        width: 100,
-                        height: 100,
+                        width: 90,
                         fit: BoxFit.cover,
                       );
                     },
                   ),
                 ),
+              ],
+              if (_videos.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Text('${_videos.length} video(s) selecionado(s)'),
               ],
               const SizedBox(height: 16),
               SwitchListTile(
@@ -691,6 +742,7 @@ class _WorkoutCompletionSheetState extends State<_WorkoutCompletionSheet> {
                       _CompletionResult(
                         postToFeed: _postToFeed,
                         images: _images,
+                        videos: _videos,
                       ),
                     );
                   },

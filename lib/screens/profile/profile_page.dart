@@ -10,6 +10,7 @@ import 'package:powerank/screens/social/user_connections_page.dart';
 import 'package:powerank/services/firestore_service.dart';
 import 'package:powerank/widgets/app_drawer.dart';
 import 'package:powerank/widgets/notification_menu_button.dart';
+import 'package:powerank/widgets/progress_area_chart.dart';
 import 'package:share_plus/share_plus.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -90,18 +91,17 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-Future<void> _shareProfile(BuildContext context, String username) async {
-  final box = context.findRenderObject() as RenderBox?;
-  final user = FirebaseAuth.instance.currentUser;
-  if (user == null) return;
+  Future<void> _shareProfile(BuildContext context, String username) async {
+    final box = context.findRenderObject() as RenderBox?;
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
 
-  await Share.share(
-    'Segue-me no Powerank!\n\nUsername: @$username\nID: ${user.uid}\n\nProcura este username dentro do app.',
-    sharePositionOrigin:
-        box == null ? null : box.localToGlobal(Offset.zero) & box.size,
-  );
-}
-
+    await Share.share(
+      'Segue-me no Powerank!\n\nUsername: @$username\nID: ${user.uid}\n\nProcura este username dentro do app.',
+      sharePositionOrigin:
+          box == null ? null : box.localToGlobal(Offset.zero) & box.size,
+    );
+  }
 
   Widget _buildAvatar(ThemeData theme, String photoUrl) {
     final hasPhoto = photoUrl.isNotEmpty;
@@ -109,10 +109,10 @@ Future<void> _shareProfile(BuildContext context, String username) async {
     return GestureDetector(
       onTap: _uploadingPhoto ? null : _showPhotoOptions,
       child: Stack(
-        alignment: Alignment.center,
+        clipBehavior: Clip.none,
         children: [
           CircleAvatar(
-            radius: 44,
+            radius: 46,
             backgroundColor: theme.colorScheme.primary.withOpacity(0.15),
             backgroundImage: hasPhoto ? NetworkImage(photoUrl) : null,
             child: !hasPhoto
@@ -120,27 +120,27 @@ Future<void> _shareProfile(BuildContext context, String username) async {
                 : null,
           ),
           Positioned(
-            right: 0,
-            bottom: 0,
+            right: -2,
+            bottom: -2,
             child: CircleAvatar(
-              radius: 14,
+              radius: 15,
               backgroundColor: theme.colorScheme.primary,
               child: const Icon(Icons.camera_alt, size: 14, color: Colors.white),
             ),
           ),
           if (_uploadingPhoto)
-            Container(
-              width: 88,
-              height: 88,
-              decoration: BoxDecoration(
-                color: Colors.black45,
-                borderRadius: BorderRadius.circular(44),
-              ),
-              child: const Center(
-                child: SizedBox(
-                  width: 22,
-                  height: 22,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.black45,
+                  borderRadius: BorderRadius.circular(46),
+                ),
+                child: const Center(
+                  child: SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
                 ),
               ),
             ),
@@ -150,32 +150,39 @@ Future<void> _shareProfile(BuildContext context, String username) async {
   }
 
   Widget _buildCounter({
-    required BuildContext context,
     required String label,
-    required int value,
-    required VoidCallback onTap,
+    required String value,
+    required VoidCallback? onTap,
     required Color textColor,
     required Color mutedColor,
   }) {
+    final content = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: TextStyle(
+              color: textColor,
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: TextStyle(color: mutedColor),
+          ),
+        ],
+      ),
+    );
+
+    if (onTap == null) return content;
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-        child: Column(
-          children: [
-            Text(
-              '$value',
-              style: TextStyle(
-                color: textColor,
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            Text(label, style: TextStyle(color: mutedColor)),
-          ],
-        ),
-      ),
+      child: content,
     );
   }
 
@@ -198,20 +205,17 @@ Future<void> _shareProfile(BuildContext context, String username) async {
       appBar: AppBar(
         title: const Text('Profile'),
         actions: [
-          Builder(
-            builder: (context) => IconButton(
-              icon: const Icon(Icons.share),
-              onPressed: () async {
-                final doc = await FirebaseFirestore.instance
-                    .collection('users')
-                    .doc(user.uid)
-                    .get();
-                final username =
-                    (doc.data()?['username'] ?? 'Utilizador').toString();
-                if (!context.mounted) return;
-                await _shareProfile(context, username);
-              },
-            ),
+          IconButton(
+            icon: const Icon(Icons.share),
+            onPressed: () async {
+              final doc = await FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(user.uid)
+                  .get();
+              final username = (doc.data()?['username'] ?? 'Utilizador').toString();
+              if (!context.mounted) return;
+              await _shareProfile(context, username);
+            },
           ),
           Builder(
             builder: (context) => NotificationMenuButton(
@@ -222,120 +226,266 @@ Future<void> _shareProfile(BuildContext context, String username) async {
       ),
       endDrawer: const AppDrawer(),
       body: StreamBuilder<DocumentSnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .snapshots(),
-        builder: (context, snap) {
-          final data = snap.data?.data() as Map<String, dynamic>?;
+        stream: FirebaseFirestore.instance.collection('users').doc(user.uid).snapshots(),
+        builder: (context, userSnapshot) {
+          final data = userSnapshot.data?.data() as Map<String, dynamic>?;
           final username = (data?['username'] ?? 'Utilizador').toString();
           final photoUrl = (data?['photoUrl'] ?? '').toString();
           final followers = List<String>.from(data?['followers'] ?? []).length;
           final following = List<String>.from(data?['following'] ?? []).length;
           final isPrivate = data?['isPrivate'] == true;
 
-          return Column(
-            children: [
-              const SizedBox(height: 30),
-              _buildAvatar(theme, photoUrl),
-              const SizedBox(height: 15),
-              Text(
-                username,
-                style: TextStyle(
-                  fontSize: 20,
-                  color: textColor,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: isPrivate
-                      ? Colors.orange.withOpacity(0.12)
-                      : Colors.green.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  isPrivate ? 'Conta privada' : 'Conta publica',
-                  style: TextStyle(
-                    color: isPrivate ? Colors.orange : Colors.green,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Toca na foto para alterar',
-                style: TextStyle(color: mutedColor, fontSize: 12),
-              ),
-              const SizedBox(height: 25),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  StreamBuilder<List<WorkoutPost>>(
-                    stream: FirestoreService().getWorkoutTemplatesStream(),
-                    builder: (context, workSnap) {
-                      final count = workSnap.data?.length ?? 0;
-                      return Column(
+          return FutureBuilder<List<dynamic>>(
+            future: Future.wait([
+              FirestoreService().getUserCheckInCount(user.uid),
+              FirestoreService().getUserTotalWeight(user.uid),
+              FirestoreService().getUserPoints(user.uid),
+              FirestoreService().getUserProgress(user.uid),
+              FirestoreService().getUserPublishedWorkoutCount(user.uid),
+              FirestoreService().getUserTotalExerciseCount(user.uid),
+            ]),
+            builder: (context, statsSnapshot) {
+              final streak =
+                  statsSnapshot.hasData ? statsSnapshot.data![0] as int : 0;
+              final totalWeight = statsSnapshot.hasData
+                  ? statsSnapshot.data![1] as double
+                  : 0.0;
+              final points =
+                  statsSnapshot.hasData ? statsSnapshot.data![2] as int : 0;
+              final progress = statsSnapshot.hasData
+                  ? List<Map<String, dynamic>>.from(statsSnapshot.data![3] as List)
+                  : <Map<String, dynamic>>[];
+              final publishedCount =
+                  statsSnapshot.hasData ? statsSnapshot.data![4] as int : 0;
+              final totalExercises =
+                  statsSnapshot.hasData ? statsSnapshot.data![5] as int : 0;
+
+              return SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(16, 24, 16, 28),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    _buildAvatar(theme, photoUrl),
+                    const SizedBox(height: 16),
+                    Text(
+                      username,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 22,
+                        color: textColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                      decoration: BoxDecoration(
+                        color: isPrivate
+                            ? Colors.orange.withOpacity(0.12)
+                            : Colors.green.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        isPrivate ? 'Conta privada' : 'Conta publica',
+                        style: TextStyle(
+                          color: isPrivate ? Colors.orange : Colors.green,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      'Toca na foto para alterar',
+                      style: TextStyle(color: mutedColor, fontSize: 12),
+                    ),
+                    const SizedBox(height: 28),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: StreamBuilder<List<WorkoutPost>>(
+                            stream: FirestoreService().getWorkoutTemplatesStream(),
+                            builder: (context, workSnap) {
+                              final count = workSnap.data?.length ?? 0;
+                              return _buildCounter(
+                                label: 'Treinos',
+                                value: '$count',
+                                onTap: null,
+                                textColor: textColor,
+                                mutedColor: mutedColor,
+                              );
+                            },
+                          ),
+                        ),
+                        Expanded(
+                          child: _buildCounter(
+                            label: 'Seguidores',
+                            value: '$followers',
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => UserConnectionsPage(
+                                    userId: user.uid,
+                                    username: username,
+                                    initialTabIndex: 0,
+                                  ),
+                                ),
+                              );
+                            },
+                            textColor: textColor,
+                            mutedColor: mutedColor,
+                          ),
+                        ),
+                        Expanded(
+                          child: _buildCounter(
+                            label: 'A seguir',
+                            value: '$following',
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => UserConnectionsPage(
+                                    userId: user.uid,
+                                    username: username,
+                                    initialTabIndex: 1,
+                                  ),
+                                ),
+                              );
+                            },
+                            textColor: textColor,
+                            mutedColor: mutedColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 28),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: theme.cardColor,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '$count',
+                            'Resumo',
                             style: TextStyle(
                               color: textColor,
-                              fontSize: 22,
+                              fontSize: 18,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          Text('Treinos', style: TextStyle(color: mutedColor)),
+                          const SizedBox(height: 14),
+                          Wrap(
+                            spacing: 12,
+                            runSpacing: 12,
+                            children: [
+                              _MetricChip(
+                                label: 'Sequencia',
+                                value: '$streak dias',
+                              ),
+                              _MetricChip(
+                                label: 'Treinos publicados',
+                                value: '$publishedCount',
+                              ),
+                              _MetricChip(
+                                label: 'Exercicios totais',
+                                value: '$totalExercises',
+                              ),
+                              _MetricChip(
+                                label: 'Peso total',
+                                value: '${totalWeight.toStringAsFixed(0)} kg',
+                              ),
+                              _MetricChip(
+                                label: 'Pontuacao',
+                                value: '$points pts',
+                              ),
+                            ],
+                          ),
                         ],
-                      );
-                    },
-                  ),
-                  _buildCounter(
-                    context: context,
-                    label: 'Seguidores',
-                    value: followers,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => UserConnectionsPage(
-                            userId: user.uid,
-                            username: username,
-                            initialTabIndex: 0,
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: theme.cardColor,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Evolucao do treino',
+                            style: TextStyle(
+                              color: textColor,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                      );
-                    },
-                    textColor: textColor,
-                    mutedColor: mutedColor,
-                  ),
-                  _buildCounter(
-                    context: context,
-                    label: 'A seguir',
-                    value: following,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => UserConnectionsPage(
-                            userId: user.uid,
-                            username: username,
-                            initialTabIndex: 1,
+                          const SizedBox(height: 6),
+                          Text(
+                            'Mostra a carga total agregada por registo publicado.',
+                            style: TextStyle(color: mutedColor, fontSize: 12),
                           ),
-                        ),
-                      );
-                    },
-                    textColor: textColor,
-                    mutedColor: mutedColor,
-                  ),
-                ],
-              ),
-            ],
+                          const SizedBox(height: 16),
+                          ProgressAreaChart(progress: progress),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
           );
         },
+      ),
+    );
+  }
+}
+
+class _MetricChip extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _MetricChip({
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primary.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              color: theme.colorScheme.onSurface.withOpacity(0.7),
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: TextStyle(
+              color: theme.colorScheme.onSurface,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
       ),
     );
   }

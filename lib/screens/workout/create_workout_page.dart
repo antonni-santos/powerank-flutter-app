@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:powerank/data/exercise_suggetions.dart';
 
 class CreateWorkoutPage extends StatefulWidget {
   const CreateWorkoutPage({super.key});
@@ -40,6 +41,7 @@ class _CreateWorkoutPageState extends State<CreateWorkoutPage> {
   final TextEditingController repsController = TextEditingController();
 
   final List<ExerciseEntry> exercises = [];
+  List<Map<String, String>> suggestions = [];
   bool _saving = false;
 
   @override
@@ -56,6 +58,19 @@ class _CreateWorkoutPageState extends State<CreateWorkoutPage> {
     final doc =
         await FirebaseFirestore.instance.collection('users').doc(uid).get();
     return (doc.data()?['username'] ?? 'Utilizador').toString();
+  }
+
+  void _updateSuggestions(String query) {
+    setState(() {
+      suggestions = ExerciseSuggestions.search(query);
+    });
+  }
+
+  void _selectSuggestion(String name) {
+    setState(() {
+      nameController.text = name;
+      suggestions = [];
+    });
   }
 
   void addExercise() {
@@ -84,6 +99,7 @@ class _CreateWorkoutPageState extends State<CreateWorkoutPage> {
       weightController.clear();
       setsController.clear();
       repsController.clear();
+      suggestions = [];
     });
   }
 
@@ -109,7 +125,7 @@ class _CreateWorkoutPageState extends State<CreateWorkoutPage> {
 
       final totalWeight = exercises.fold<double>(
         0,
-        (sum, e) => sum + (e.weight * e.sets * e.reps),
+        (acc, e) => acc + (e.weight * e.sets * e.reps),
       );
 
       await FirebaseFirestore.instance.collection('workout_templates').add({
@@ -118,6 +134,7 @@ class _CreateWorkoutPageState extends State<CreateWorkoutPage> {
         'username': username,
         'exercises': exercises.map((e) => e.toMap()).toList(),
         'imageUrls': [],
+        'videoUrls': [],
         'totalWeight': totalWeight,
         'likes': 0,
         'likedBy': [],
@@ -161,7 +178,7 @@ class _CreateWorkoutPageState extends State<CreateWorkoutPage> {
               controller: workoutNameController,
               decoration: const InputDecoration(
                 border: OutlineInputBorder(),
-                hintText: 'Ex: Peito e Tríceps',
+                hintText: 'Ex: Peito e Triceps',
               ),
             ),
             const SizedBox(height: 20),
@@ -174,9 +191,32 @@ class _CreateWorkoutPageState extends State<CreateWorkoutPage> {
               controller: nameController,
               decoration: const InputDecoration(
                 border: OutlineInputBorder(),
-                hintText: 'Nome (ex: Supino reto)',
+                hintText: 'Nome (ex: remada, ombros, supino...)',
               ),
+              onChanged: _updateSuggestions,
             ),
+            if (suggestions.isNotEmpty)
+              Container(
+                margin: const EdgeInsets.only(top: 6),
+                constraints: const BoxConstraints(maxHeight: 180),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  color: Theme.of(context).cardColor,
+                ),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: suggestions.length,
+                  itemBuilder: (context, index) {
+                    final item = suggestions[index];
+                    return ListTile(
+                      dense: true,
+                      title: Text(item['name']!),
+                      subtitle: Text(item['muscle']!),
+                      onTap: () => _selectSuggestion(item['name']!),
+                    );
+                  },
+                ),
+              ),
             const SizedBox(height: 8),
             Row(
               children: [
@@ -197,7 +237,7 @@ class _CreateWorkoutPageState extends State<CreateWorkoutPage> {
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(
                       border: OutlineInputBorder(),
-                      hintText: 'Séries',
+                      hintText: 'Series',
                     ),
                   ),
                 ),
