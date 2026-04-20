@@ -1,0 +1,119 @@
+body {  
+  margin: 0;
+  font-family: 'Poppins', sans-serif;
+  background: #0D1B2A;
+  color: white;
+}
+
+/* SCROLL SUAVE */
+html {
+  scroll-behavior: smooth;
+}
+
+/* HEADER */
+header {
+  text-align: center;
+  padding: 80px 20px;
+  background: linear-gradient(135deg, #0D1B2A, #1B263B);
+}
+
+h1 {
+  font-size: 48px;
+  color: #00E676;
+}
+
+/* SECTIONS */
+section {
+  padding: 60px 20px;
+  text-align: center;
+}
+
+/* FEATURES */
+.features ul {
+  list-style: none;
+  padding: 0;
+}
+
+.features li {
+  margin: 12px;
+  background: #1B263B;
+  padding: 15px;
+  border-radius: 12px;
+  display: inline-block;
+  transition: 0.3s;
+}
+
+.features li:hover {
+  background: #243447;
+  transform: scale(1.05);
+}
+
+/* LINKS */
+.features a {
+  text-decoration: none;
+  color: white;
+  font-weight: 500;
+}
+
+.features a:hover {
+  color: #00E676;
+}
+
+/* DETALHES */
+.detail {
+  background: #1B263B;
+  margin: 20px;
+  border-radius: 20px;
+  padding: 40px;
+}
+
+/* IMAGENS */
+.images {
+  display: flex;
+  justify-content: center;
+  gap: 25px;
+  flex-wrap: wrap;
+}
+
+.images img {
+  width: 260px;
+  border-radius: 15px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+  transition: 0.3s;
+}
+
+.images img:hover {
+  transform: scale(1.05);
+}
+
+/* BOTÃO */
+button {
+  padding: 15px 35px;
+  font-size: 16px;
+  background: linear-gradient(135deg, #00E676, #00C853);
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  color: black;
+  font-weight: bold;
+}
+
+button:hover {
+  transform: scale(1.05);
+}
+
+/* CARDS */
+.about, .author {
+  background: #1B263B;
+  margin: 20px;
+  border-radius: 20px;
+  padding: 40px;
+}
+
+/* FOOTER */
+footer {
+  text-align: center;
+  padding: 30px;
+  background: #0B1320;
+  color: #aaa;
+}
