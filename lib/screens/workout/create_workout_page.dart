@@ -1,7 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:powerank/data/exercise_suggetions.dart';
+import 'package:powerank/data/exercise_suggestions.dart';
+import 'package:powerank/utils/workout_metrics.dart';
 
 class CreateWorkoutPage extends StatefulWidget {
   const CreateWorkoutPage({super.key});
@@ -24,13 +25,14 @@ class ExerciseEntry {
   });
 
   Map<String, dynamic> toMap() => {
-        'name': name,
-        'weight': weight,
-        'sets': sets,
-        'reps': reps,
-      };
+    'name': name,
+    'weight': weight,
+    'sets': sets,
+    'reps': reps,
+  };
 
-  String get display => '$name - ${weight}kg x $sets x $reps';
+  String get display =>
+      '$name - ${WorkoutMetrics.formatWeight(weight)}kg x $sets x $reps';
 }
 
 class _CreateWorkoutPageState extends State<CreateWorkoutPage> {
@@ -41,7 +43,7 @@ class _CreateWorkoutPageState extends State<CreateWorkoutPage> {
   final TextEditingController repsController = TextEditingController();
 
   final List<ExerciseEntry> exercises = [];
-  List<Map<String, String>> suggestions = [];
+  List<ExerciseSuggestionItem> suggestions = [];
   bool _saving = false;
 
   @override
@@ -55,8 +57,10 @@ class _CreateWorkoutPageState extends State<CreateWorkoutPage> {
   }
 
   Future<String> _getCurrentUsername(String uid) async {
-    final doc =
-        await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    final doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .get();
     return (doc.data()?['username'] ?? 'Utilizador').toString();
   }
 
@@ -79,9 +83,7 @@ class _CreateWorkoutPageState extends State<CreateWorkoutPage> {
         setsController.text.isEmpty ||
         repsController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Preenche todos os campos do exercício'),
-        ),
+        const SnackBar(content: Text('Preenche todos os campos do exercício')),
       );
       return;
     }
@@ -123,10 +125,7 @@ class _CreateWorkoutPageState extends State<CreateWorkoutPage> {
     try {
       final username = await _getCurrentUsername(user.uid);
 
-      final totalWeight = exercises.fold<double>(
-        0,
-        (acc, e) => acc + (e.weight * e.sets * e.reps),
-      );
+      final totalWeight = exercises.fold<double>(0, (acc, e) => acc + e.weight);
 
       await FirebaseFirestore.instance.collection('workout_templates').add({
         'title': workoutNameController.text.trim(),
@@ -146,9 +145,9 @@ class _CreateWorkoutPageState extends State<CreateWorkoutPage> {
       Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao guardar treino: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erro ao guardar treino: $e')));
     } finally {
       if (mounted) {
         setState(() {
@@ -161,9 +160,7 @@ class _CreateWorkoutPageState extends State<CreateWorkoutPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Criar treino'),
-      ),
+      appBar: AppBar(title: const Text('Criar treino')),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -210,9 +207,9 @@ class _CreateWorkoutPageState extends State<CreateWorkoutPage> {
                     final item = suggestions[index];
                     return ListTile(
                       dense: true,
-                      title: Text(item['name']!),
-                      subtitle: Text(item['muscle']!),
-                      onTap: () => _selectSuggestion(item['name']!),
+                      title: Text(item.name),
+                      subtitle: Text(item.muscle),
+                      onTap: () => _selectSuggestion(item.name),
                     );
                   },
                 ),

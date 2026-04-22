@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:powerank/utils/workout_metrics.dart';
 
 class WorkoutPost {
   final String id;
@@ -40,25 +41,17 @@ class WorkoutPost {
           ? (data['createdAt'] as Timestamp).toDate().toString()
           : 'agora',
       title: data['title'] ?? '',
-      exercises: List<Map<String, dynamic>>.from(
-        (data['exercises'] ?? []).map(
-          (e) => e is Map
-              ? Map<String, dynamic>.from(e)
-              : {
-                  'name': e.toString(),
-                  'weight': 0,
-                  'sets': 0,
-                  'reps': 0,
-                },
-        ),
-      ),
+      exercises: WorkoutMetrics.parseExercises(data['exercises']),
       imageUrls: List<String>.from(data['imageUrls'] ?? []),
       videoUrls: List<String>.from(data['videoUrls'] ?? []),
       likes: data['likes'] ?? 0,
       comments: data['comments'] ?? 0,
       commentsList: [],
       likedBy: List<String>.from(data['likedBy'] ?? []),
-      totalWeight: (data['totalWeight'] ?? 0).toDouble(),
+      totalWeight: WorkoutMetrics.resolveTotalWeight(
+        exercises: data['exercises'],
+        storedTotalWeight: data['totalWeight'],
+      ),
     );
   }
 }

@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:powerank/models/workout_post.dart';
 import 'package:powerank/services/firestore_service.dart';
+import 'package:powerank/utils/workout_metrics.dart';
 import 'package:powerank/widgets/app_drawer.dart';
 import 'package:powerank/widgets/notification_menu_button.dart';
 import 'package:powerank/widgets/workout_share_sheet.dart';
@@ -15,14 +16,7 @@ class WorkoutHistoryPage extends StatelessWidget {
   const WorkoutHistoryPage({super.key});
 
   String _exerciseDisplay(dynamic exercise) {
-    if (exercise is Map) {
-      final name = exercise['name'] ?? '';
-      final weight = exercise['weight'] ?? 0;
-      final sets = exercise['sets'] ?? 0;
-      final reps = exercise['reps'] ?? 0;
-      return '$name - ${weight}kg x $sets x $reps';
-    }
-    return exercise.toString();
+    return WorkoutMetrics.exerciseDisplay(exercise);
   }
 
   Future<void> _publishWorkout(
@@ -94,16 +88,13 @@ class WorkoutHistoryPage extends StatelessWidget {
       );
     } catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao publicar no feed: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erro ao publicar no feed: $e')));
     }
   }
 
-  Future<void> _deleteWorkout(
-    BuildContext context,
-    WorkoutPost workout,
-  ) async {
+  Future<void> _deleteWorkout(BuildContext context, WorkoutPost workout) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
@@ -116,10 +107,7 @@ class WorkoutHistoryPage extends StatelessWidget {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text(
-              'Eliminar',
-              style: TextStyle(color: Colors.red),
-            ),
+            child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -249,10 +237,7 @@ class _HistoryPublishResult {
   final List<XFile> images;
   final List<XFile> videos;
 
-  _HistoryPublishResult({
-    required this.images,
-    required this.videos,
-  });
+  _HistoryPublishResult({required this.images, required this.videos});
 }
 
 class _HistoryPublishSheet extends StatefulWidget {

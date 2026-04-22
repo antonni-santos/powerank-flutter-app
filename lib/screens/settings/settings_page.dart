@@ -102,9 +102,9 @@ class _SettingsPageState extends State<SettingsPage> {
           children: [
             Text('Powerank e uma app de monitorizacao de treinos com sistema de ranking competitivo.'),
             SizedBox(height: 12),
-            Text('Desenvolvido por Antonni Santos'),
+            Text('Desenvolvido por Antonni Santos, Vicente Coutinho e João Neves'),
             SizedBox(height: 8),
-            Text('Versao 1.0.0'),
+            Text('Versao 3.20.0'),
           ],
         ),
         actions: [
@@ -211,7 +211,7 @@ class _SettingsPageState extends State<SettingsPage> {
           const ListTile(
             leading: Icon(Icons.verified),
             title: Text('Versao'),
-            trailing: Text('1.0.0'),
+            trailing: Text('3.20.0'),
           ),
         ],
       ),

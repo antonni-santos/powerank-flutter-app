@@ -352,7 +352,7 @@ class _ChatPageState extends State<ChatPage> {
           decoration: BoxDecoration(
             color: isMe
                 ? theme.colorScheme.primary.withOpacity(0.12)
-                : theme.colorScheme.surfaceVariant,
+                : theme.colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
               color: isMe
@@ -549,7 +549,7 @@ class _ChatPageState extends State<ChatPage> {
                               decoration: BoxDecoration(
                                 color: isMe
                                     ? theme.colorScheme.primary
-                                    : theme.colorScheme.surfaceVariant,
+                                    : theme.colorScheme.surfaceContainerHighest,
                                 borderRadius: BorderRadius.only(
                                   topLeft: const Radius.circular(16),
                                   topRight: const Radius.circular(16),
@@ -592,7 +592,7 @@ class _ChatPageState extends State<ChatPage> {
                           ? 'Escreve para o grupo...'
                           : 'Escreve uma mensagem...',
                       filled: true,
-                      fillColor: theme.colorScheme.surfaceVariant,
+                      fillColor: theme.colorScheme.surfaceContainerHighest,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(24),
                         borderSide: BorderSide.none,

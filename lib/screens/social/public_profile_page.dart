@@ -4,15 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:powerank/screens/social/user_connections_page.dart';
 import 'package:powerank/services/firestore_service.dart';
 import 'package:powerank/services/notification_service.dart';
+import 'package:powerank/utils/workout_metrics.dart';
 import 'package:powerank/widgets/progress_area_chart.dart';
 
 class PublicProfilePage extends StatelessWidget {
   final String userId;
 
-  const PublicProfilePage({
-    super.key,
-    required this.userId,
-  });
+  const PublicProfilePage({super.key, required this.userId});
 
   String _performanceLabel(List<Map<String, dynamic>> progress) {
     if (progress.length < 2) return 'A começar';
@@ -32,8 +30,8 @@ class PublicProfilePage extends StatelessWidget {
         .collection('users')
         .doc(currentUser.uid)
         .get();
-    final currentUsername =
-        (currentDoc.data()?['username'] ?? 'Utilizador').toString();
+    final currentUsername = (currentDoc.data()?['username'] ?? 'Utilizador')
+        .toString();
 
     final targetDoc = await FirebaseFirestore.instance
         .collection('users')
@@ -42,18 +40,24 @@ class PublicProfilePage extends StatelessWidget {
     final targetData = targetDoc.data() ?? {};
     final isPrivate = targetData['isPrivate'] == true;
 
-    final myFollowing = List<String>.from(currentDoc.data()?['following'] ?? []);
+    final myFollowing = List<String>.from(
+      currentDoc.data()?['following'] ?? [],
+    );
     final alreadyFollowing = myFollowing.contains(targetUid);
 
     if (alreadyFollowing) {
       await FirebaseFirestore.instance
           .collection('users')
           .doc(currentUser.uid)
-          .update({'following': FieldValue.arrayRemove([targetUid])});
+          .update({
+            'following': FieldValue.arrayRemove([targetUid]),
+          });
       await FirebaseFirestore.instance
           .collection('users')
           .doc(targetUid)
-          .update({'followers': FieldValue.arrayRemove([currentUser.uid])});
+          .update({
+            'followers': FieldValue.arrayRemove([currentUser.uid]),
+          });
       return;
     }
 
@@ -86,11 +90,12 @@ class PublicProfilePage extends StatelessWidget {
     await FirebaseFirestore.instance
         .collection('users')
         .doc(currentUser.uid)
-        .update({'following': FieldValue.arrayUnion([targetUid])});
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(targetUid)
-        .update({'followers': FieldValue.arrayUnion([currentUser.uid])});
+        .update({
+          'following': FieldValue.arrayUnion([targetUid]),
+        });
+    await FirebaseFirestore.instance.collection('users').doc(targetUid).update({
+      'followers': FieldValue.arrayUnion([currentUser.uid]),
+    });
   }
 
   @override
@@ -101,7 +106,10 @@ class PublicProfilePage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Perfil')),
       body: FutureBuilder<DocumentSnapshot>(
-        future: FirebaseFirestore.instance.collection('users').doc(userId).get(),
+        future: FirebaseFirestore.instance
+            .collection('users')
+            .doc(userId)
+            .get(),
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
@@ -120,8 +128,7 @@ class PublicProfilePage extends StatelessWidget {
           return FutureBuilder<List<dynamic>>(
             future: Future.wait([
               firestore.getUserCheckInCount(userId),
-              firestore.getUserTotalWeight(userId),
-              firestore.getUserPoints(userId),
+              firestore.getUserWorkoutStats(userId),
               firestore.getUserProgress(userId),
               firestore.getUserPublishedWorkoutCount(userId),
               firestore.getUserTotalExerciseCount(userId),
@@ -132,12 +139,14 @@ class PublicProfilePage extends StatelessWidget {
               }
 
               final streak = statsSnapshot.data![0] as int;
-              final totalWeight = statsSnapshot.data![1] as double;
-              final points = statsSnapshot.data![2] as int;
-              final progress =
-                  List<Map<String, dynamic>>.from(statsSnapshot.data![3] as List);
-              final publishedCount = statsSnapshot.data![4] as int;
-              final totalExercises = statsSnapshot.data![5] as int;
+              final workoutStats = statsSnapshot.data![1] as UserWorkoutStats;
+              final totalWeight = workoutStats.totalWeight;
+              final points = workoutStats.points;
+              final progress = List<Map<String, dynamic>>.from(
+                statsSnapshot.data![2] as List,
+              );
+              final publishedCount = statsSnapshot.data![3] as int;
+              final totalExercises = statsSnapshot.data![4] as int;
 
               return SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
@@ -145,8 +154,9 @@ class PublicProfilePage extends StatelessWidget {
                   children: [
                     CircleAvatar(
                       radius: 46,
-                      backgroundImage:
-                          photoUrl.isNotEmpty ? NetworkImage(photoUrl) : null,
+                      backgroundImage: photoUrl.isNotEmpty
+                          ? NetworkImage(photoUrl)
+                          : null,
                       child: photoUrl.isEmpty
                           ? Text(
                               username.isNotEmpty
@@ -180,10 +190,7 @@ class PublicProfilePage extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        _StatItem(
-                          label: 'Dias',
-                          value: '$streak',
-                        ),
+                        _StatItem(label: 'Dias', value: '$streak'),
                         _ClickableStatItem(
                           label: 'Seguidores',
                           value: '$followers',
@@ -233,12 +240,10 @@ class PublicProfilePage extends StatelessWidget {
                         ),
                         _StatChip(
                           label: 'Peso total',
-                          value: '${totalWeight.toStringAsFixed(0)} kg',
+                          value:
+                              '${WorkoutMetrics.formatWeight(totalWeight)} kg',
                         ),
-                        _StatChip(
-                          label: 'Pontuacao',
-                          value: '$points',
-                        ),
+                        _StatChip(label: 'Pontuacao', value: '$points pts'),
                       ],
                     ),
                     const SizedBox(height: 24),
@@ -277,10 +282,7 @@ class _StatItem extends StatelessWidget {
   final String label;
   final String value;
 
-  const _StatItem({
-    required this.label,
-    required this.value,
-  });
+  const _StatItem({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
@@ -328,10 +330,7 @@ class _StatChip extends StatelessWidget {
   final String label;
   final String value;
 
-  const _StatChip({
-    required this.label,
-    required this.value,
-  });
+  const _StatChip({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {

@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:powerank/models/workout_post.dart';
 import 'package:powerank/screens/social/user_connections_page.dart';
 import 'package:powerank/services/firestore_service.dart';
+import 'package:powerank/utils/workout_metrics.dart';
 import 'package:powerank/widgets/app_drawer.dart';
 import 'package:powerank/widgets/notification_menu_button.dart';
 import 'package:powerank/widgets/progress_area_chart.dart';
@@ -98,8 +99,9 @@ class _ProfilePageState extends State<ProfilePage> {
 
     await Share.share(
       'Segue-me no Powerank!\n\nUsername: @$username\nID: ${user.uid}\n\nProcura este username dentro do app.',
-      sharePositionOrigin:
-          box == null ? null : box.localToGlobal(Offset.zero) & box.size,
+      sharePositionOrigin: box == null
+          ? null
+          : box.localToGlobal(Offset.zero) & box.size,
     );
   }
 
@@ -125,7 +127,11 @@ class _ProfilePageState extends State<ProfilePage> {
             child: CircleAvatar(
               radius: 15,
               backgroundColor: theme.colorScheme.primary,
-              child: const Icon(Icons.camera_alt, size: 14, color: Colors.white),
+              child: const Icon(
+                Icons.camera_alt,
+                size: 14,
+                color: Colors.white,
+              ),
             ),
           ),
           if (_uploadingPhoto)
@@ -169,10 +175,7 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
           ),
           const SizedBox(height: 2),
-          Text(
-            label,
-            style: TextStyle(color: mutedColor),
-          ),
+          Text(label, style: TextStyle(color: mutedColor)),
         ],
       ),
     );
@@ -212,7 +215,8 @@ class _ProfilePageState extends State<ProfilePage> {
                   .collection('users')
                   .doc(user.uid)
                   .get();
-              final username = (doc.data()?['username'] ?? 'Utilizador').toString();
+              final username = (doc.data()?['username'] ?? 'Utilizador')
+                  .toString();
               if (!context.mounted) return;
               await _shareProfile(context, username);
             },
@@ -226,7 +230,10 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
       endDrawer: const AppDrawer(),
       body: StreamBuilder<DocumentSnapshot>(
-        stream: FirebaseFirestore.instance.collection('users').doc(user.uid).snapshots(),
+        stream: FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .snapshots(),
         builder: (context, userSnapshot) {
           final data = userSnapshot.data?.data() as Map<String, dynamic>?;
           final username = (data?['username'] ?? 'Utilizador').toString();
@@ -238,27 +245,35 @@ class _ProfilePageState extends State<ProfilePage> {
           return FutureBuilder<List<dynamic>>(
             future: Future.wait([
               FirestoreService().getUserCheckInCount(user.uid),
-              FirestoreService().getUserTotalWeight(user.uid),
-              FirestoreService().getUserPoints(user.uid),
+              FirestoreService().getUserWorkoutStats(user.uid),
               FirestoreService().getUserProgress(user.uid),
               FirestoreService().getUserPublishedWorkoutCount(user.uid),
               FirestoreService().getUserTotalExerciseCount(user.uid),
             ]),
             builder: (context, statsSnapshot) {
-              final streak =
-                  statsSnapshot.hasData ? statsSnapshot.data![0] as int : 0;
-              final totalWeight = statsSnapshot.hasData
-                  ? statsSnapshot.data![1] as double
-                  : 0.0;
-              final points =
-                  statsSnapshot.hasData ? statsSnapshot.data![2] as int : 0;
+              final workoutStats = statsSnapshot.hasData
+                  ? statsSnapshot.data![1] as UserWorkoutStats
+                  : const UserWorkoutStats(
+                      totalWeight: 0,
+                      totalLikes: 0,
+                      checkIns: 0,
+                    );
+              final streak = statsSnapshot.hasData
+                  ? statsSnapshot.data![0] as int
+                  : 0;
+              final totalWeight = workoutStats.totalWeight;
+              final points = workoutStats.points;
               final progress = statsSnapshot.hasData
-                  ? List<Map<String, dynamic>>.from(statsSnapshot.data![3] as List)
+                  ? List<Map<String, dynamic>>.from(
+                      statsSnapshot.data![2] as List,
+                    )
                   : <Map<String, dynamic>>[];
-              final publishedCount =
-                  statsSnapshot.hasData ? statsSnapshot.data![4] as int : 0;
-              final totalExercises =
-                  statsSnapshot.hasData ? statsSnapshot.data![5] as int : 0;
+              final publishedCount = statsSnapshot.hasData
+                  ? statsSnapshot.data![3] as int
+                  : 0;
+              final totalExercises = statsSnapshot.hasData
+                  ? statsSnapshot.data![4] as int
+                  : 0;
 
               return SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(16, 24, 16, 28),
@@ -278,7 +293,10 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                     const SizedBox(height: 10),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 7,
+                      ),
                       decoration: BoxDecoration(
                         color: isPrivate
                             ? Colors.orange.withOpacity(0.12)
@@ -303,7 +321,8 @@ class _ProfilePageState extends State<ProfilePage> {
                       children: [
                         Expanded(
                           child: StreamBuilder<List<WorkoutPost>>(
-                            stream: FirestoreService().getWorkoutTemplatesStream(),
+                            stream: FirestoreService()
+                                .getWorkoutTemplatesStream(),
                             builder: (context, workSnap) {
                               final count = workSnap.data?.length ?? 0;
                               return _buildCounter(
@@ -396,7 +415,8 @@ class _ProfilePageState extends State<ProfilePage> {
                               ),
                               _MetricChip(
                                 label: 'Peso total',
-                                value: '${totalWeight.toStringAsFixed(0)} kg',
+                                value:
+                                    '${WorkoutMetrics.formatWeight(totalWeight)} kg',
                               ),
                               _MetricChip(
                                 label: 'Pontuacao',
@@ -451,10 +471,7 @@ class _MetricChip extends StatelessWidget {
   final String label;
   final String value;
 
-  const _MetricChip({
-    required this.label,
-    required this.value,
-  });
+  const _MetricChip({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {

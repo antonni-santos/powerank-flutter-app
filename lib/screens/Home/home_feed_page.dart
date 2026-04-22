@@ -1,6 +1,5 @@
 import 'dart:io';
 
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -37,38 +36,17 @@ class _HomeFeedPageState extends State<HomeFeedPage> {
   }
 
   WorkoutPost _postFromDoc(QueryDocumentSnapshot<Map<String, dynamic>> doc) {
-    final data = doc.data();
-    return WorkoutPost(
-      id: doc.id,
-      userId: data['userId'] ?? '',
-      user: (data['username'] ?? 'Utilizador').toString(),
-      time: data['createdAt'] is Timestamp
-          ? (data['createdAt'] as Timestamp).toDate().toString()
-          : 'agora',
-      title: data['title'] ?? '',
-      exercises: List<Map<String, dynamic>>.from(
-        (data['exercises'] ?? []).map(
-          (e) => e is Map<String, dynamic>
-              ? e
-              : Map<String, dynamic>.from(e as Map),
-        ),
-      ),
-      imageUrls: List<String>.from(data['imageUrls'] ?? []),
-      videoUrls: List<String>.from(data['videoUrls'] ?? []),
-      likes: data['likes'] ?? 0,
-      comments: data['comments'] ?? 0,
-      commentsList: [],
-      likedBy: List<String>.from(data['likedBy'] ?? []),
-      totalWeight: (data['totalWeight'] ?? 0).toDouble(),
-    );
+    return WorkoutPost.fromFirestore(doc.id, doc.data());
   }
 
   Future<void> _loadTodayCheckIn() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    final doc =
-        await FirebaseFirestore.instance.collection('checkins').doc(user.uid).get();
+    final doc = await FirebaseFirestore.instance
+        .collection('checkins')
+        .doc(user.uid)
+        .get();
 
     final data = doc.data() ?? {};
     final entries = Map<String, dynamic>.from(data['entries'] ?? {});
@@ -136,8 +114,10 @@ class _HomeFeedPageState extends State<HomeFeedPage> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    final checkinDoc =
-        await FirebaseFirestore.instance.collection('checkins').doc(user.uid).get();
+    final checkinDoc = await FirebaseFirestore.instance
+        .collection('checkins')
+        .doc(user.uid)
+        .get();
 
     final data = checkinDoc.data() ?? {};
     final entries = Map<String, dynamic>.from(data['entries'] ?? {});
@@ -149,7 +129,10 @@ class _HomeFeedPageState extends State<HomeFeedPage> {
     }
 
     if (feedPostId != null && feedPostId.isNotEmpty) {
-      await FirebaseFirestore.instance.collection('feed_posts').doc(feedPostId).delete();
+      await FirebaseFirestore.instance
+          .collection('feed_posts')
+          .doc(feedPostId)
+          .delete();
     }
 
     await FirebaseFirestore.instance.collection('checkins').doc(user.uid).set({
@@ -173,19 +156,29 @@ class _HomeFeedPageState extends State<HomeFeedPage> {
     setState(() => _savingCheckIn = true);
 
     try {
-      final userDoc =
-          await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
 
       final username = (userDoc.data()?['username'] ?? 'Utilizador').toString();
       final isPrivate = userDoc.data()?['isPrivate'] == true;
 
-      final imageUrls = await _uploadImages(userId: user.uid, images: completion.images);
-      final videoUrls = await _uploadVideos(userId: user.uid, videos: completion.videos);
+      final imageUrls = await _uploadImages(
+        userId: user.uid,
+        images: completion.images,
+      );
+      final videoUrls = await _uploadVideos(
+        userId: user.uid,
+        videos: completion.videos,
+      );
 
       String? feedPostId;
 
       if (completion.postToFeed) {
-        final postRef = FirebaseFirestore.instance.collection('feed_posts').doc();
+        final postRef = FirebaseFirestore.instance
+            .collection('feed_posts')
+            .doc();
 
         await postRef.set({
           'title': workout.title,
@@ -206,19 +199,22 @@ class _HomeFeedPageState extends State<HomeFeedPage> {
         feedPostId = postRef.id;
       }
 
-      await FirebaseFirestore.instance.collection('checkins').doc(user.uid).set({
-        'entries': {
-          _todayKey(): {
-            'workoutId': workout.id,
-            'workoutTitle': workout.title,
-            'imageUrls': imageUrls,
-            'videoUrls': videoUrls,
-            'postedToFeed': completion.postToFeed,
-            'feedPostId': feedPostId,
-            'checkedAt': Timestamp.now(),
+      await FirebaseFirestore.instance.collection('checkins').doc(user.uid).set(
+        {
+          'entries': {
+            _todayKey(): {
+              'workoutId': workout.id,
+              'workoutTitle': workout.title,
+              'imageUrls': imageUrls,
+              'videoUrls': videoUrls,
+              'postedToFeed': completion.postToFeed,
+              'feedPostId': feedPostId,
+              'checkedAt': Timestamp.now(),
+            },
           },
         },
-      }, SetOptions(merge: true));
+        SetOptions(merge: true),
+      );
 
       if (!mounted) return;
       setState(() {
@@ -237,9 +233,9 @@ class _HomeFeedPageState extends State<HomeFeedPage> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao publicar treino: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erro ao publicar treino: $e')));
     } finally {
       if (mounted) setState(() => _savingCheckIn = false);
     }
@@ -257,7 +253,8 @@ class _HomeFeedPageState extends State<HomeFeedPage> {
     final completion = await showModalBottomSheet<_CompletionResult>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => _WorkoutCompletionSheet(workoutTitle: selectedWorkout.title),
+      builder: (_) =>
+          _WorkoutCompletionSheet(workoutTitle: selectedWorkout.title),
     );
 
     if (!mounted || completion == null) return;
@@ -330,8 +327,9 @@ class _HomeFeedPageState extends State<HomeFeedPage> {
               children: [
                 ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        _checkedInToday ? Colors.blueGrey : Colors.green,
+                    backgroundColor: _checkedInToday
+                        ? Colors.blueGrey
+                        : Colors.green,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     minimumSize: const Size(double.infinity, 52),
@@ -361,7 +359,9 @@ class _HomeFeedPageState extends State<HomeFeedPage> {
                   ),
                   onPressed: _savingCheckIn
                       ? null
-                      : (_checkedInToday ? _showTodayOptions : _openWorkoutSelector),
+                      : (_checkedInToday
+                            ? _showTodayOptions
+                            : _openWorkoutSelector),
                 ),
                 if (!_checkedInToday) ...[
                   const SizedBox(height: 10),
@@ -369,7 +369,9 @@ class _HomeFeedPageState extends State<HomeFeedPage> {
                     onPressed: () async {
                       await Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const CreateWorkoutPage()),
+                        MaterialPageRoute(
+                          builder: (_) => const CreateWorkoutPage(),
+                        ),
                       );
                     },
                     icon: const Icon(Icons.add),
@@ -384,15 +386,20 @@ class _HomeFeedPageState extends State<HomeFeedPage> {
               stream: currentUser == null
                   ? null
                   : FirebaseFirestore.instance
-                      .collection('users')
-                      .doc(currentUser.uid)
-                      .snapshots(),
+                        .collection('users')
+                        .doc(currentUser.uid)
+                        .snapshots(),
               builder: (context, userSnapshot) {
-                final userData = userSnapshot.data?.data() as Map<String, dynamic>?;
-                final following = Set<String>.from(userData?['following'] ?? []);
+                final userData =
+                    userSnapshot.data?.data() as Map<String, dynamic>?;
+                final following = Set<String>.from(
+                  userData?['following'] ?? [],
+                );
 
                 return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                  stream: FirebaseFirestore.instance.collection('feed_posts').snapshots(),
+                  stream: FirebaseFirestore.instance
+                      .collection('feed_posts')
+                      .snapshots(),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator());
@@ -411,8 +418,9 @@ class _HomeFeedPageState extends State<HomeFeedPage> {
                       ..sort((a, b) {
                         final aTs = a.data()['createdAt'] as Timestamp?;
                         final bTs = b.data()['createdAt'] as Timestamp?;
-                        return (bTs?.millisecondsSinceEpoch ?? 0)
-                            .compareTo(aTs?.millisecondsSinceEpoch ?? 0);
+                        return (bTs?.millisecondsSinceEpoch ?? 0).compareTo(
+                          aTs?.millisecondsSinceEpoch ?? 0,
+                        );
                       });
                     final posts = docs.map(_postFromDoc).toList();
 
@@ -420,7 +428,9 @@ class _HomeFeedPageState extends State<HomeFeedPage> {
                     final suggestedPosts = <WorkoutPost>[];
 
                     for (final post in posts) {
-                      final raw = docs.firstWhere((doc) => doc.id == post.id).data();
+                      final raw = docs
+                          .firstWhere((doc) => doc.id == post.id)
+                          .data();
                       final isPrivate = raw['authorIsPrivate'] == true;
                       final isMine = post.userId == currentUser?.uid;
                       final isFollowing = following.contains(post.userId);
@@ -450,7 +460,8 @@ class _HomeFeedPageState extends State<HomeFeedPage> {
                       itemCount: ordered.length,
                       itemBuilder: (context, index) {
                         final post = ordered[index];
-                        final isSuggested = !following.contains(post.userId) &&
+                        final isSuggested =
+                            !following.contains(post.userId) &&
                             post.userId != currentUser?.uid;
 
                         final showSuggestedHeader =
@@ -516,30 +527,7 @@ class _WorkoutSelectorSheet extends StatelessWidget {
   const _WorkoutSelectorSheet();
 
   WorkoutPost _fromDoc(QueryDocumentSnapshot<Map<String, dynamic>> doc) {
-    final data = doc.data();
-    return WorkoutPost(
-      id: doc.id,
-      userId: data['userId'] ?? '',
-      user: (data['username'] ?? 'Utilizador').toString(),
-      time: data['createdAt'] is Timestamp
-          ? (data['createdAt'] as Timestamp).toDate().toString()
-          : 'agora',
-      title: data['title'] ?? '',
-      exercises: List<Map<String, dynamic>>.from(
-        (data['exercises'] ?? []).map(
-          (e) => e is Map<String, dynamic>
-              ? e
-              : Map<String, dynamic>.from(e as Map),
-        ),
-      ),
-      imageUrls: List<String>.from(data['imageUrls'] ?? []),
-      videoUrls: List<String>.from(data['videoUrls'] ?? []),
-      likes: data['likes'] ?? 0,
-      comments: data['comments'] ?? 0,
-      commentsList: [],
-      likedBy: List<String>.from(data['likedBy'] ?? []),
-      totalWeight: (data['totalWeight'] ?? 0).toDouble(),
-    );
+    return WorkoutPost.fromFirestore(doc.id, doc.data());
   }
 
   @override
@@ -566,9 +554,9 @@ class _WorkoutSelectorSheet extends StatelessWidget {
                   stream: user == null
                       ? null
                       : FirebaseFirestore.instance
-                          .collection('workout_templates')
-                          .where('userId', isEqualTo: user.uid)
-                          .snapshots(),
+                            .collection('workout_templates')
+                            .where('userId', isEqualTo: user.uid)
+                            .snapshots(),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator());
@@ -593,7 +581,9 @@ class _WorkoutSelectorSheet extends StatelessWidget {
                           child: ListTile(
                             leading: const Icon(Icons.fitness_center),
                             title: Text(workout.title),
-                            subtitle: Text('${workout.exercises.length} exercicios'),
+                            subtitle: Text(
+                              '${workout.exercises.length} exercicios',
+                            ),
                             trailing: const Icon(Icons.chevron_right),
                             onTap: () => Navigator.pop(context, workout),
                           ),
@@ -617,7 +607,8 @@ class _WorkoutCompletionSheet extends StatefulWidget {
   const _WorkoutCompletionSheet({required this.workoutTitle});
 
   @override
-  State<_WorkoutCompletionSheet> createState() => _WorkoutCompletionSheetState();
+  State<_WorkoutCompletionSheet> createState() =>
+      _WorkoutCompletionSheetState();
 }
 
 class _WorkoutCompletionSheetState extends State<_WorkoutCompletionSheet> {
@@ -660,7 +651,10 @@ class _WorkoutCompletionSheetState extends State<_WorkoutCompletionSheet> {
             children: [
               Text(
                 'Concluir treino: ${widget.workoutTitle}',
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 16),
               const Text('Podes adicionar imagens e videos.'),

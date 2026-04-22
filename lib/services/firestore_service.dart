@@ -1,6 +1,25 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/workout_post.dart';
+import '../utils/workout_metrics.dart';
+
+class UserWorkoutStats {
+  final double totalWeight;
+  final int totalLikes;
+  final int checkIns;
+
+  const UserWorkoutStats({
+    required this.totalWeight,
+    required this.totalLikes,
+    required this.checkIns,
+  });
+
+  int get points => WorkoutMetrics.calculatePoints(
+    totalWeight: totalWeight,
+    checkIns: checkIns,
+    totalLikes: totalLikes,
+  );
+}
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -11,14 +30,6 @@ class FirestoreService {
       return (doc.data()?['username'] ?? 'Utilizador').toString();
     }
     return 'Utilizador';
-  }
-
-  List<Map<String, dynamic>> _parseExercises(dynamic raw) {
-    if (raw == null) return [];
-    return (raw as List).map((e) {
-      if (e is Map) return Map<String, dynamic>.from(e);
-      return {'name': e.toString(), 'weight': 0, 'sets': 0, 'reps': 0};
-    }).toList();
   }
 
   List<String> _parseUrls(dynamic raw) {
@@ -41,33 +52,37 @@ class FirestoreService {
           .where('userId', isEqualTo: user.uid)
           .snapshots()
           .map((snapshot) {
-        final docs = snapshot.docs.toList()
-          ..sort((a, b) {
-            final aTs = a.data()['createdAt'] as Timestamp?;
-            final bTs = b.data()['createdAt'] as Timestamp?;
-            return (bTs?.millisecondsSinceEpoch ?? 0)
-                .compareTo(aTs?.millisecondsSinceEpoch ?? 0);
-          });
+            final docs = snapshot.docs.toList()
+              ..sort((a, b) {
+                final aTs = a.data()['createdAt'] as Timestamp?;
+                final bTs = b.data()['createdAt'] as Timestamp?;
+                return (bTs?.millisecondsSinceEpoch ?? 0).compareTo(
+                  aTs?.millisecondsSinceEpoch ?? 0,
+                );
+              });
 
-        return docs.map((doc) {
-          final data = doc.data();
-          return WorkoutPost(
-            id: doc.id,
-            userId: data['userId'] ?? '',
-            user: (data['username'] ?? username).toString(),
-            time: _parseTime(data['createdAt']),
-            title: data['title'] ?? '',
-            exercises: _parseExercises(data['exercises']),
-            imageUrls: _parseUrls(data['imageUrls']),
-            videoUrls: _parseUrls(data['videoUrls']),
-            likes: data['likes'] ?? 0,
-            comments: data['comments'] ?? 0,
-            commentsList: [],
-            likedBy: List<String>.from(data['likedBy'] ?? []),
-            totalWeight: (data['totalWeight'] ?? 0).toDouble(),
-          );
-        }).toList();
-      });
+            return docs.map((doc) {
+              final data = doc.data();
+              return WorkoutPost(
+                id: doc.id,
+                userId: data['userId'] ?? '',
+                user: (data['username'] ?? username).toString(),
+                time: _parseTime(data['createdAt']),
+                title: data['title'] ?? '',
+                exercises: WorkoutMetrics.parseExercises(data['exercises']),
+                imageUrls: _parseUrls(data['imageUrls']),
+                videoUrls: _parseUrls(data['videoUrls']),
+                likes: data['likes'] ?? 0,
+                comments: data['comments'] ?? 0,
+                commentsList: [],
+                likedBy: List<String>.from(data['likedBy'] ?? []),
+                totalWeight: WorkoutMetrics.resolveTotalWeight(
+                  exercises: data['exercises'],
+                  storedTotalWeight: data['totalWeight'],
+                ),
+              );
+            }).toList();
+          });
     });
   }
 
@@ -77,8 +92,9 @@ class FirestoreService {
         ..sort((a, b) {
           final aTs = a.data()['createdAt'] as Timestamp?;
           final bTs = b.data()['createdAt'] as Timestamp?;
-          return (bTs?.millisecondsSinceEpoch ?? 0)
-              .compareTo(aTs?.millisecondsSinceEpoch ?? 0);
+          return (bTs?.millisecondsSinceEpoch ?? 0).compareTo(
+            aTs?.millisecondsSinceEpoch ?? 0,
+          );
         });
 
       return docs.map((doc) {
@@ -89,14 +105,17 @@ class FirestoreService {
           user: (data['username'] ?? 'Utilizador').toString(),
           time: _parseTime(data['createdAt']),
           title: data['title'] ?? '',
-          exercises: _parseExercises(data['exercises']),
+          exercises: WorkoutMetrics.parseExercises(data['exercises']),
           imageUrls: _parseUrls(data['imageUrls']),
           videoUrls: _parseUrls(data['videoUrls']),
           likes: data['likes'] ?? 0,
           comments: data['comments'] ?? 0,
           commentsList: [],
           likedBy: List<String>.from(data['likedBy'] ?? []),
-          totalWeight: (data['totalWeight'] ?? 0).toDouble(),
+          totalWeight: WorkoutMetrics.resolveTotalWeight(
+            exercises: data['exercises'],
+            storedTotalWeight: data['totalWeight'],
+          ),
         );
       }).toList();
     });
@@ -108,17 +127,35 @@ class FirestoreService {
     return entries.length;
   }
 
-  Future<double> getUserTotalWeight(String userId) async {
+  Future<UserWorkoutStats> getUserWorkoutStats(String userId) async {
     final snapshot = await _db
         .collection('feed_posts')
         .where('userId', isEqualTo: userId)
         .get();
 
-    double total = 0;
+    double totalWeight = 0;
+    int totalLikes = 0;
+
     for (final doc in snapshot.docs) {
-      total += (doc.data()['totalWeight'] ?? 0).toDouble();
+      final data = doc.data();
+      totalWeight += WorkoutMetrics.resolveTotalWeight(
+        exercises: data['exercises'],
+        storedTotalWeight: data['totalWeight'],
+      );
+      totalLikes += (data['likes'] ?? 0) as int;
     }
-    return total;
+
+    final checkIns = await getUserCheckInCount(userId);
+
+    return UserWorkoutStats(
+      totalWeight: totalWeight,
+      totalLikes: totalLikes,
+      checkIns: checkIns,
+    );
+  }
+
+  Future<double> getUserTotalWeight(String userId) async {
+    return (await getUserWorkoutStats(userId)).totalWeight;
   }
 
   Future<int> getUserPublishedWorkoutCount(String userId) async {
@@ -137,28 +174,13 @@ class FirestoreService {
 
     int total = 0;
     for (final doc in snapshot.docs) {
-      total += List.from(doc.data()['exercises'] ?? []).length;
+      total += WorkoutMetrics.parseExercises(doc.data()['exercises']).length;
     }
     return total;
   }
 
   Future<int> getUserPoints(String userId) async {
-    final snapshot = await _db
-        .collection('feed_posts')
-        .where('userId', isEqualTo: userId)
-        .get();
-
-    double totalWeight = 0;
-    int totalLikes = 0;
-
-    for (final doc in snapshot.docs) {
-      final data = doc.data();
-      totalWeight += (data['totalWeight'] ?? 0).toDouble();
-      totalLikes += (data['likes'] ?? 0) as int;
-    }
-
-    final checkIns = await getUserCheckInCount(userId);
-    return (totalWeight / 100).floor() + (checkIns * 50) + (totalLikes * 10);
+    return (await getUserWorkoutStats(userId)).points;
   }
 
   Future<List<Map<String, dynamic>>> getUserProgress(String userId) async {
@@ -171,8 +193,9 @@ class FirestoreService {
       ..sort((a, b) {
         final aTs = a.data()['createdAt'] as Timestamp?;
         final bTs = b.data()['createdAt'] as Timestamp?;
-        return (aTs?.millisecondsSinceEpoch ?? 0)
-            .compareTo(bTs?.millisecondsSinceEpoch ?? 0);
+        return (aTs?.millisecondsSinceEpoch ?? 0).compareTo(
+          bTs?.millisecondsSinceEpoch ?? 0,
+        );
       });
 
     final aggregated = <String, Map<String, dynamic>>{};
@@ -185,16 +208,16 @@ class FirestoreService {
           ? 'Sem data'
           : '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}';
 
-      final current = aggregated[key] ??
-          {
-            'title': key,
-            'weight': 0.0,
-            'workouts': 0,
-            'createdAt': ts,
-          };
+      final current =
+          aggregated[key] ??
+          {'title': key, 'weight': 0.0, 'workouts': 0, 'createdAt': ts};
 
       current['weight'] =
-          (current['weight'] as double) + (data['totalWeight'] ?? 0).toDouble();
+          (current['weight'] as double) +
+          WorkoutMetrics.resolveTotalWeight(
+            exercises: data['exercises'],
+            storedTotalWeight: data['totalWeight'],
+          );
       current['workouts'] = (current['workouts'] as int) + 1;
       aggregated[key] = current;
     }
